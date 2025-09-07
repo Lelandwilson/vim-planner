@@ -93,6 +93,10 @@ function M.add_task(task)
   local y, m = month_for_date(task.date)
   local month = M.read_month(y, m)
   month.tasks = month.tasks or {}
+  -- assign order_index as max+1 for the day
+  local max_idx = 0
+  for _, t in ipairs(month.tasks) do if t.date == task.date then max_idx = math.max(max_idx, t.order_index or 0) end end
+  task.order_index = (task.order_index and task.order_index > 0) and task.order_index or (max_idx + 1)
   month.tasks[#month.tasks + 1] = task
   M.write_month(y, m, month)
   return task
@@ -231,6 +235,29 @@ function M.query_tasks(q)
     end
   end
   return res
+end
+
+-- Reorder tasks within the same day by order_index swap (§7.3)
+function M.reorder_task(date, id, direction)
+  local y, m = month_for_date(date)
+  local month = M.read_month(y, m)
+  local day_tasks = {}
+  for _, t in ipairs(month.tasks or {}) do if t.date == date then day_tasks[#day_tasks + 1] = t end end
+  table.sort(day_tasks, function(a, b) return (a.order_index or 0) < (b.order_index or 0) end)
+  local pos
+  for i, t in ipairs(day_tasks) do if t.id == id then pos = i break end end
+  if not pos then return false end
+  local new_pos = direction == 'up' and (pos - 1) or (pos + 1)
+  if new_pos < 1 or new_pos > #day_tasks then return false end
+  local a, b = day_tasks[pos], day_tasks[new_pos]
+  a.order_index, b.order_index = b.order_index, a.order_index
+  -- write back to month.tasks
+  for i, t in ipairs(month.tasks) do
+    if t.id == a.id then month.tasks[i] = a end
+    if t.id == b.id then month.tasks[i] = b end
+  end
+  M.write_month(y, m, month)
+  return true
 end
 
 function M.query_events(q)

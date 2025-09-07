@@ -88,14 +88,16 @@ function M._register_commands()
     if view == 'planner' then
       M.open_planner({ date = args[2] })
     elseif view == 'calendar' then
-      M.open_calendar({ date = args[2], view = 'month' })
+      local mode = args[2] or 'month'
+      local date = args[3]
+      M.open_calendar({ date = date, view = mode })
     elseif view == 'mini' then
       M.toggle_mini({ date = args[2] })
     else
       vim.notify('Unknown view: ' .. view, vim.log.levels.ERROR)
     end
   end, { nargs = '*', complete = function(_, _)
-    return { 'planner', 'calendar', 'mini' }
+    return { 'planner', 'calendar', 'mini', 'month', 'week', 'day' }
   end })
 
   create('SmartPlannerCapture', function(cmd)

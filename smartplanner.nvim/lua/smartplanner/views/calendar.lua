@@ -91,11 +91,60 @@ local function render_month_grid(buf, date)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 end
 
+local function render_day_view(buf, date)
+  local y, m = dateu.year_month(date)
+  local month_tbl, sprints = collect_for_month(y, m)
+  local lines = { '# Day — ' .. date, '' }
+  local spans, singles = cell_summary(date, month_tbl, sprints)
+  if #spans > 0 then
+    lines[#lines + 1] = 'Top band (spans):'
+    for _, s in ipairs(spans) do lines[#lines + 1] = '- ' .. s end
+    lines[#lines + 1] = ''
+  end
+  if #singles > 0 then
+    lines[#lines + 1] = 'Items:'
+    for _, s in ipairs(singles) do lines[#lines + 1] = '- ' .. s end
+  end
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+end
+
+local function render_week_view(buf, date)
+  local y, m = dateu.year_month(date)
+  local grid = dateu.month_grid(y, m)
+  local month_tbl, sprints = collect_for_month(y, m)
+  -- find the week containing the date
+  local target_week
+  for _, week in ipairs(grid) do
+    for _, day in ipairs(week) do if day == date then target_week = week break end end
+    if target_week then break end
+  end
+  target_week = target_week or grid[1]
+  local lines = { '# Week of ' .. target_week[1], 'Mon   Tue   Wed   Thu   Fri   Sat   Sun' }
+  local brow, srow = {}, {}
+  for _, day in ipairs(target_week) do
+    local spans, singles = cell_summary(day, month_tbl, sprints)
+    local b = (#spans > 0) and table.concat(spans, '|') or ' '
+    local s = (#singles > 0) and singles[1] or ' '
+    table.insert(brow, string.sub(string.format('%-6s', b), 1, 6))
+    table.insert(srow, string.sub(string.format('%-6s', s), 1, 6))
+  end
+  lines[#lines + 1] = table.concat(brow, ' ')
+  lines[#lines + 1] = table.concat(srow, ' ')
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+end
+
 function M.open(opts)
-  local buf = ensure_buf('Calendar (Month)')
-  local today = opts.date or dateu.today()
+  local view = (opts and opts.view) or 'month'
+  local buf = ensure_buf('Calendar (' .. view:gsub('^%l', string.upper) .. ')')
+  local today = (opts and opts.date) or dateu.today()
   state.set_focus_day(today)
-  render_month_grid(buf, today)
+  if view == 'day' then
+    render_day_view(buf, today)
+  elseif view == 'week' then
+    render_week_view(buf, today)
+  else
+    render_month_grid(buf, today)
+  end
   return buf
 end
 

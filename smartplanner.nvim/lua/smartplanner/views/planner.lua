@@ -3,7 +3,7 @@ local state = require('smartplanner.state')
 local dateu = require('smartplanner.util.date')
 local store = require('smartplanner.storage.fs')
 
-local M = { buf = nil }
+local M = { buf = nil, line_index = {} }
 
 local function ensure_buf(title)
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
@@ -54,6 +54,7 @@ local function render_day(lines, day, month_tbl, sprints)
     for _, e in ipairs(events) do
       local badge = e.span and '[S]' or (e.allday and '[A]' or '[ ]')
       lines[#lines + 1] = string.format('- %s %s', badge, e.title or e.id)
+      M.line_index[#lines] = { type = 'event', id = e.id, date = day }
     end
     lines[#lines + 1] = ''
   end
@@ -62,6 +63,7 @@ local function render_day(lines, day, month_tbl, sprints)
     for _, t in ipairs(tasks) do
       local token = t.status == 'done' and '[✓]' or (t.status == 'doing' and '[~]' or (t.priority and t.priority > 2 and '[!!]' or '[ ]'))
       lines[#lines + 1] = string.format('- %s %s', token, t.title)
+      M.line_index[#lines] = { type = 'task', id = t.id, date = day }
     end
     lines[#lines + 1] = ''
   end
@@ -69,6 +71,7 @@ local function render_day(lines, day, month_tbl, sprints)
     lines[#lines + 1] = '### Notes'
     for _, n in ipairs(notes) do
       lines[#lines + 1] = string.format('- %s', n.path)
+      M.line_index[#lines] = { type = 'note', id = n.id, date = day, path = n.path }
     end
     lines[#lines + 1] = ''
   end
@@ -91,6 +94,7 @@ local function render_month(buf, date)
   local month_tbl = store.read_month(y, m)
   local days = dateu.month_days(y, m)
   local sprints = load_sprints(y)
+  M.line_index = {}
   local lines = { string.format('# Planner — %04d-%02d', y, m), '' }
   for _, d in ipairs(days) do render_day(lines, d, month_tbl, sprints) end
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
@@ -120,6 +124,66 @@ function M.goto_date(arg)
   if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
     render_month(M.buf, d)
   end
+end
+
+local function current_item()
+  local lnum = vim.api.nvim_win_get_cursor(0)[1]
+  return M.line_index[lnum]
+end
+
+function M.toggle_status()
+  local item = current_item()
+  if not item or item.type ~= 'task' then return end
+  -- naive cycle: todo -> doing -> done -> todo
+  local update
+  local now = require('smartplanner.storage.fs')
+  -- fetch and toggle via update
+  local next_status = { todo = 'doing', doing = 'done', done = 'todo' }
+  update = now.update(item.id, { status = next_status['todo'] }) -- default
+  -- Try to detect current from rendered line
+  local line = vim.api.nvim_get_current_line()
+  local cur = line:match('%[(.-)%]')
+  local map = { ['✓'] = 'done', ['~'] = 'doing', ['!!'] = 'todo', [' '] = 'todo' }
+  local s = map[cur] or 'todo'
+  local ns = next_status[s] or 'todo'
+  now.update(item.id, { status = ns })
+  M.goto_date(state.get_focus_day() or dateu.today())
+end
+
+function M.reschedule()
+  local item = current_item()
+  if not item or (item.type ~= 'task' and item.type ~= 'event') then return end
+  vim.ui.input({ prompt = 'New date (YYYY-MM-DD): ', default = state.get_focus_day() or dateu.today() }, function(val)
+    if not val or val == '' then return end
+    require('smartplanner.storage.fs').move(item.id, { date = val, start_date = val })
+    M.goto_date(val)
+  end)
+end
+
+function M.move_up()
+  local item = current_item()
+  if not item or item.type ~= 'task' then return end
+  require('smartplanner.storage.fs').reorder_task(item.date, item.id, 'up')
+  M.goto_date(item.date)
+end
+
+function M.move_down()
+  local item = current_item()
+  if not item or item.type ~= 'task' then return end
+  require('smartplanner.storage.fs').reorder_task(item.date, item.id, 'down')
+  M.goto_date(item.date)
+end
+
+function M.next_day()
+  local d = state.get_focus_day() or dateu.today()
+  local nd = dateu.add_days(d, 1)
+  M.goto_date(nd)
+end
+
+function M.prev_day()
+  local d = state.get_focus_day() or dateu.today()
+  local pd = dateu.add_days(d, -1)
+  M.goto_date(pd)
 end
 
 return M
