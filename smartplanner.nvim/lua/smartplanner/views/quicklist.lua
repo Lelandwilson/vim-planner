@@ -3,7 +3,7 @@ local idu = require('smartplanner.util.id')
 local store = require('smartplanner.storage.fs')
 local dateu = require('smartplanner.util.date')
 
-local M = { win = nil, buf = nil }
+local M = { win = nil, buf = nil, index = {} }
 
 local function render()
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
@@ -12,15 +12,18 @@ local function render()
   local y = tonumber(os.date('%Y'))
   local inbox = store.query_quick(y)
   local lines = { '# Quick Notes & Todos (' .. y .. ')', '' }
+  M.index = {}
   lines[#lines + 1] = '## Todos'
   for _, t in ipairs(inbox.quick_tasks or {}) do
     local token = (t.status == 'done') and '[✓]' or '[ ]'
-    lines[#lines + 1] = string.format('- %s %s  (id:%s)', token, t.title or '', t.id)
+    lines[#lines + 1] = string.format('- %s %s', token, t.title or '')
+    M.index[#lines] = { kind = 'task', id = t.id }
   end
   lines[#lines + 1] = ''
   lines[#lines + 1] = '## Notes'
   for _, n in ipairs(inbox.quick_notes or {}) do
-    lines[#lines + 1] = string.format('- %s  (id:%s)', (n.title or n.body or ''), n.id)
+    lines[#lines + 1] = string.format('- %s', (n.title or n.body or ''))
+    M.index[#lines] = { kind = 'note', id = n.id }
   end
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
   vim.api.nvim_buf_set_option(M.buf, 'filetype', 'markdown')
@@ -56,30 +59,31 @@ local function open_float()
     end)
   end, { buffer = M.buf, desc = 'Add quick note' })
   vim.keymap.set('n', 'x', function()
-    local line = vim.api.nvim_get_current_line()
-    local id = line:match('%(id:([^)]+)%)')
-    if id then
-      -- toggle done
-      local done = line:match('%[✓%]') ~= nil
-      store.update_quick(id, { status = done and 'todo' or 'done' })
-      render()
-    end
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local entry = M.index[lnum]
+    if not entry or entry.kind ~= 'task' then return end
+    -- detect current done state from line, toggle
+    local line = vim.api.nvim_buf_get_lines(M.buf, lnum - 1, lnum, false)[1]
+    local done = line:match('%[✓%]') ~= nil
+    store.update_quick(entry.id, { status = done and 'todo' or 'done' })
+    render()
   end, { buffer = M.buf, desc = 'Toggle quick todo' })
   vim.keymap.set('n', 'p', function()
-    local line = vim.api.nvim_get_current_line()
-    local id = line:match('%(id:([^)]+)%)')
-    if id then
-      vim.ui.input({ prompt = 'Promote to date (YYYY-MM-DD): ', default = dateu.today() }, function(d)
-        if not d or d == '' then return end
-        store.promote_quick_to_task(id, d)
-        render()
-      end)
-    end
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local entry = M.index[lnum]
+    if not entry or entry.kind ~= 'task' then return end
+    vim.ui.input({ prompt = 'Promote to date (YYYY-MM-DD): ', default = dateu.today() }, function(d)
+      if not d or d == '' then return end
+      store.promote_quick_to_task(entry.id, d)
+      render()
+    end)
   end, { buffer = M.buf, desc = 'Promote quick todo to dated task' })
   vim.keymap.set('n', 'D', function()
-    local line = vim.api.nvim_get_current_line()
-    local id = line:match('%(id:([^)]+)%)')
-    if id then store.delete_quick(id); render() end
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local entry = M.index[lnum]
+    if not entry then return end
+    store.delete_quick(entry.id)
+    render()
   end, { buffer = M.buf, desc = 'Delete quick item' })
 end
 
