@@ -40,3 +40,4 @@ return {
 - Works without Telescope/render-markdown; enables extras when present.
 - No hard-coded colors; adapts to your Catppuccin theme.
 - Keep planner fast by limiting visible months; data is sharded per month.
+- Calendar buffers use a custom filetype (`smartplanner-calendar`) to avoid Markdown LSP crashes. If you prefer attaching your Markdown LSP to the calendar, set an autocmd to change filetype, but note some servers (e.g., markdown_oxide) may not handle the grid text.

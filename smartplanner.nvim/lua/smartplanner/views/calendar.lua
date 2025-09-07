@@ -11,7 +11,9 @@ local function ensure_buf(title)
     vim.cmd('tabnew')
     M.buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_set_option(M.buf, 'bufhidden', 'wipe')
-    vim.api.nvim_buf_set_option(M.buf, 'filetype', 'markdown')
+    -- Use a custom filetype to avoid attaching Markdown LSPs (e.g., markdown_oxide)
+    vim.api.nvim_buf_set_option(M.buf, 'filetype', 'smartplanner-calendar')
+    vim.api.nvim_buf_set_option(M.buf, 'buftype', 'nofile')
     vim.api.nvim_buf_set_name(M.buf, 'SmartPlanner: ' .. title)
   end
   return M.buf
