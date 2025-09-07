@@ -131,8 +131,12 @@ function M._register_commands()
 
   create('SmartPlannerExport', function(cmd)
     local fmt = cmd.fargs[1] or 'md'
-    M.export({ fmt = fmt })
-  end, { nargs = '?' })
+    local scope = cmd.fargs[2] or 'month' -- day|week|month
+    local date = cmd.fargs[3]
+    M.export({ fmt = fmt, scope = scope, date = date })
+  end, { nargs = '*', complete = function(_, _)
+    return { 'md', 'csv', 'day', 'week', 'month' }
+  end })
 
   create('SmartPlannerConfig', function()
     require('smartplanner.config').open_help()

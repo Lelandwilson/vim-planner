@@ -16,6 +16,8 @@ function M.setup()
   link('SmartPlannerBullet', 'RenderMarkdownListMarker', 'markdownListMarker')
   link('SmartPlannerToday', 'DiffAdd', 'Search')
   link('SmartPlannerSpan', 'WarningMsg', 'Title')
+  link('SmartPlannerSprint', 'RenderMarkdownH3', 'Title')
+  link('SmartPlannerUrgent', 'DiagnosticError', 'ErrorMsg')
   link('SmartPlannerItem', 'Normal', 'Normal')
 end
 

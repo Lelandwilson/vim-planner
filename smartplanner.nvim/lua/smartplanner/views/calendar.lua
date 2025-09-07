@@ -11,9 +11,9 @@ local function ensure_buf(title)
     vim.cmd('tabnew')
     M.buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_set_option(M.buf, 'bufhidden', 'wipe')
-    -- Use a custom filetype to avoid attaching Markdown LSPs (e.g., markdown_oxide)
-    vim.api.nvim_buf_set_option(M.buf, 'filetype', 'smartplanner-calendar')
-    vim.api.nvim_buf_set_option(M.buf, 'buftype', 'nofile')
+    local cfg = require('smartplanner.config').get().calendar or {}
+    vim.api.nvim_buf_set_option(M.buf, 'filetype', cfg.filetype or 'smartplanner-calendar')
+    if cfg.buftype then vim.api.nvim_buf_set_option(M.buf, 'buftype', cfg.buftype) end
     vim.api.nvim_buf_set_name(M.buf, 'SmartPlanner: ' .. title)
   end
   return M.buf
@@ -55,6 +55,13 @@ local function cell_summary(day, month_tbl, sprints)
   for _, t in ipairs(month_tbl.tasks or {}) do if t.date == day then singles[#singles + 1] = 'T:' .. t.title end end
   for _, n in ipairs(month_tbl.notes_index or {}) do if n.date == day then singles[#singles + 1] = 'N:' .. (n.title or n.path) end end
   return spans, singles
+end
+
+local function day_has_urgent_task(month_tbl, day)
+  for _, t in ipairs(month_tbl.tasks or {}) do
+    if t.date == day and (t.priority or 0) >= 3 then return true end
+  end
+  return false
 end
 
 local function render_month_grid(buf, date)
@@ -115,10 +122,13 @@ local function render_month_grid(buf, date)
       -- bands
       local span_list, singles = cell_summary(day, month_tbl, sprints)
       if #span_list > 0 then
-        hl.hl_match(buf, band_line - 1, col_start, col_end, 'SmartPlannerSpan')
+        local has_sprint = false
+        for _, s in ipairs(span_list) do if s:sub(1,2) == 'S:' then has_sprint = true break end end
+        hl.hl_match(buf, band_line - 1, col_start, col_end, has_sprint and 'SmartPlannerSprint' or 'SmartPlannerSpan')
       end
       if #singles > 0 then
-        hl.hl_match(buf, single_line - 1, col_start, col_end, 'SmartPlannerBullet')
+        local urgent = day_has_urgent_task(month_tbl, day)
+        hl.hl_match(buf, single_line - 1, col_start, col_end, urgent and 'SmartPlannerUrgent' or 'SmartPlannerBullet')
       end
     end
     line_idx = line_idx + 4

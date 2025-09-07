@@ -18,11 +18,13 @@ return {
 ## Key Commands
 - Open Planner: `\sp`
 - Open Calendar: `\sc` (month). Week/Day: `:SmartPlannerOpen calendar week|day`. In a calendar buffer, `<leader>sc` cycles Month→Week→Day.
+- Calendar shortcuts: `<leader>scm` month, `<leader>scw` week, `<leader>scd` day
 - Mini Calendar: `\sm`
 - Quick Notes/Todos: `\sq` (floating). In the panel: `a` add todo, `n` add note, `x` toggle done, `p` promote todo to dated task, `D` delete, `q`/Ctrl-C close
 - Capture: `:SmartPlannerCapture task|event|note|sprint`
 - Search: `:SmartPlannerSearch tasks|events|sprints`
 - Export: `:SmartPlannerExport md|csv`
+  - Supports scope and date: `:SmartPlannerExport md day 2025-09-15`, `:SmartPlannerExport csv month`
 
 ## Planner Actions
 - Toggle status: `\sx` on a task line (todo → doing → done)

@@ -14,6 +14,7 @@ local defaults = {
   telescope = { enable = true },
   markdown = { render = true },
   keymaps = 'default',
+  calendar = { filetype = 'smartplanner-calendar', buftype = 'nofile' },
 }
 
 function M.get()

@@ -37,8 +37,13 @@ A modal-first planner for Neovim that unifies daily planning, todos, notes, spri
 ## Keymaps
 - `\\sp` open Planner; `<leader>sp` as alt
 - `\\sc` open Calendar; `<leader>sc` opens or cycles Month→Week→Day while focused
+- Shortcuts: `<leader>scm` month, `<leader>scw` week, `<leader>scd` day
 - `\\sm` toggle Mini calendar
 - Floating Planner: `<leader>sP` (Ctrl-C or `q` to close)
 - `\\sq` toggle Quick Notes/Todos (add: `a` todo, `n` note; toggle: `x`; promote: `p`; delete: `D`)
 
 See `lua/smartplanner/` for module responsibilities mapped to the spec.
+
+## Export
+- Command: `:SmartPlannerExport <fmt> <scope> [date]`
+  - Examples: `:SmartPlannerExport md day 2025-09-15`, `:SmartPlannerExport csv month`
