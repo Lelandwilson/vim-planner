@@ -6,6 +6,7 @@ local planner_view = require('smartplanner.views.planner')
 local calendar_view = require('smartplanner.views.calendar')
 local mini_view = require('smartplanner.views.mini')
 local planner_float = require('smartplanner.views.planner_float')
+local quicklist = require('smartplanner.views.quicklist')
 local export_md = require('smartplanner.export.md')
 local export_csv = require('smartplanner.export.csv')
 
@@ -40,6 +41,10 @@ end
 
 function M.toggle_mini(opts)
   return mini_view.toggle(opts or {})
+end
+
+function M.toggle_quicklist()
+  return quicklist.toggle()
 end
 
 function M.capture(payload)
@@ -98,11 +103,13 @@ function M._register_commands()
       M.toggle_mini({ date = args[2] })
     elseif view == 'planner_float' then
       planner_float.open({ date = args[2] })
+    elseif view == 'quick' or view == 'quicklist' then
+      quicklist.toggle()
     else
       vim.notify('Unknown view: ' .. view, vim.log.levels.ERROR)
     end
   end, { nargs = '*', complete = function(_, _)
-    return { 'planner', 'calendar', 'mini', 'planner_float', 'month', 'week', 'day' }
+    return { 'planner', 'calendar', 'mini', 'planner_float', 'quick', 'quicklist', 'month', 'week', 'day' }
   end })
 
   create('SmartPlannerCapture', function(cmd)

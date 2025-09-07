@@ -10,6 +10,7 @@ function M.apply_defaults()
   map('n', '\\sp', function() require('smartplanner').open_planner({}) end, 'SmartPlanner: Open Planner')
   map('n', '\\sc', function() require('smartplanner').open_calendar({}) end, 'SmartPlanner: Open Calendar')
   map('n', '\\sm', function() require('smartplanner').toggle_mini({}) end, 'SmartPlanner: Toggle Mini Calendar')
+  map('n', '\\sq', function() require('smartplanner').toggle_quicklist() end, 'SmartPlanner: Toggle Quick Notes/Todos')
   map('n', '<leader>sc', function()
     -- If calendar buffer, cycle; else open month
     local name = vim.api.nvim_buf_get_name(0)

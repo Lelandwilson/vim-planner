@@ -26,6 +26,24 @@ function M.read_month(year, month)
   return json.decode(data) or { month = string.format('%04d-%02d', year, month), tasks = {}, events = {}, notes_index = {} }
 end
 
+-- Inbox/Quicklist storage (notes/todos not yet scheduled)
+local function inbox_path(year)
+  local root = year_root({ year = year })
+  return string.format('%s/inbox.json', root)
+end
+
+local function read_inbox(year)
+  local p = inbox_path(year)
+  local data = fsu.read_file(p)
+  return (data and json.decode(data)) or { quick_tasks = {}, quick_notes = {} }
+end
+
+local function write_inbox(year, inbox)
+  local p = inbox_path(year)
+  fsu.mkdirp(vim.fn.fnamemodify(p, ':h'))
+  fsu.write_file(p, json.encode(inbox))
+end
+
 function M.write_month(year, month, tbl)
   local p = month_shard_path(year, month)
   fsu.mkdirp(vim.fn.fnamemodify(p, ':h'))
@@ -146,6 +164,66 @@ function M.add_sprint(sprint)
   s.sprints[#s.sprints + 1] = sprint
   write_sprints(y, s)
   return sprint
+end
+
+-- Quicklist API
+function M.add_quick_task(task)
+  local year = tonumber((task.created_at or os.date('%Y-%m-%d')):sub(1,4))
+  local inbox = read_inbox(year)
+  inbox.quick_tasks[#inbox.quick_tasks + 1] = task
+  write_inbox(year, inbox)
+  return task
+end
+
+function M.add_quick_note(note)
+  local year = tonumber((note.created_at or os.date('%Y-%m-%d')):sub(1,4))
+  local inbox = read_inbox(year)
+  inbox.quick_notes[#inbox.quick_notes + 1] = note
+  write_inbox(year, inbox)
+  return note
+end
+
+function M.query_quick(year)
+  year = year or tonumber(os.date('%Y'))
+  return read_inbox(year)
+end
+
+function M.update_quick(id, fields)
+  local year = tonumber(os.date('%Y'))
+  local inbox = read_inbox(year)
+  local function upd(list)
+    for i, it in ipairs(list) do if it.id == id then list[i] = vim.tbl_extend('force', it, fields); return true end end
+    return false
+  end
+  local ok = upd(inbox.quick_tasks) or upd(inbox.quick_notes)
+  if ok then write_inbox(year, inbox) end
+  return ok
+end
+
+function M.delete_quick(id)
+  local year = tonumber(os.date('%Y'))
+  local inbox = read_inbox(year)
+  local function del(list)
+    for i, it in ipairs(list) do if it.id == id then table.remove(list, i); return true end end
+    return false
+  end
+  local ok = del(inbox.quick_tasks) or del(inbox.quick_notes)
+  if ok then write_inbox(year, inbox) end
+  return ok
+end
+
+function M.promote_quick_to_task(id, date)
+  local year = tonumber(os.date('%Y'))
+  local inbox = read_inbox(year)
+  for i, it in ipairs(inbox.quick_tasks) do
+    if it.id == id then
+      table.remove(inbox.quick_tasks, i)
+      write_inbox(year, inbox)
+      it.date = date
+      return M.add_task(it)
+    end
+  end
+  return false
 end
 
 function M.update(id, fields)
