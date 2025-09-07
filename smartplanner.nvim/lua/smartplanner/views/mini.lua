@@ -18,14 +18,24 @@ local function render()
     local row = {}
     for _, day in ipairs(week) do
       local dd = tonumber(day:sub(9, 10))
-      local label = string.format('%2d', dd)
-      if day == focus then label = '[' .. string.sub(label, -2) .. ']' else label = ' ' .. label end
+      local label = string.format('%2d', dd) -- fixed width
       table.insert(row, label)
     end
     lines[#lines + 1] = table.concat(row, ' ')
   end
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
   hl.hl_line(M.buf, 0, 'SmartPlannerHeader')
+  -- Highlight focus day without changing width
+  for w, week in ipairs(grid) do
+    for i, day in ipairs(week) do
+      if day == focus then
+        local lnum = 1 + w -- headers at 0 and 1, weeks start at 2nd index (1-based to 0-based: subtract 1 later)
+        local col_start = (i - 1) * 3
+        local col_end = col_start + 2
+        hl.hl_match(M.buf, lnum, col_start, col_end, 'SmartPlannerToday')
+      end
+    end
+  end
 end
 
 local function open_float()
