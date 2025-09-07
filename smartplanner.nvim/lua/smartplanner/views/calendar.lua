@@ -3,6 +3,7 @@ local state = require('smartplanner.state')
 local dateu = require('smartplanner.util.date')
 local store = require('smartplanner.storage.fs')
 
+local hl = require('smartplanner.ui.highlight')
 local M = { buf = nil }
 
 local function ensure_buf(title)
@@ -10,6 +11,7 @@ local function ensure_buf(title)
     vim.cmd('tabnew')
     M.buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_set_option(M.buf, 'bufhidden', 'wipe')
+    vim.api.nvim_buf_set_option(M.buf, 'filetype', 'markdown')
     vim.api.nvim_buf_set_name(M.buf, 'SmartPlanner: ' .. title)
   end
   return M.buf
@@ -89,6 +91,9 @@ local function render_month_grid(buf, date)
     lines[#lines + 1] = ''
   end
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  -- Apply highlights to header and weekday row to match markdown colors
+  hl.hl_line(buf, 0, 'SmartPlannerHeader')
+  hl.hl_line(buf, 2, 'SmartPlannerWeekday')
 end
 
 local function render_day_view(buf, date)
@@ -106,6 +111,7 @@ local function render_day_view(buf, date)
     for _, s in ipairs(singles) do lines[#lines + 1] = '- ' .. s end
   end
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  hl.hl_line(buf, 0, 'SmartPlannerHeader')
 end
 
 local function render_week_view(buf, date)
@@ -131,6 +137,7 @@ local function render_week_view(buf, date)
   lines[#lines + 1] = table.concat(brow, ' ')
   lines[#lines + 1] = table.concat(srow, ' ')
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  hl.hl_line(buf, 0, 'SmartPlannerHeader')
 end
 
 function M.open(opts)

@@ -1,6 +1,7 @@
 local config = require('smartplanner.config')
 local state = require('smartplanner.state')
 local keymaps = require('smartplanner.ui.keymaps')
+local highlight = require('smartplanner.ui.highlight')
 local planner_view = require('smartplanner.views.planner')
 local calendar_view = require('smartplanner.views.calendar')
 local mini_view = require('smartplanner.views.mini')
@@ -18,6 +19,7 @@ function M.setup(opts)
       require('smartplanner.ui.telescope').setup()
     end)
   end
+  pcall(highlight.setup)
   if cfg.keymaps == 'default' then
     keymaps.apply_defaults()
   elseif type(cfg.keymaps) == 'table' then

@@ -1,6 +1,7 @@
 -- Mini-mode calendar (§2.2, §2.5)
 local state = require('smartplanner.state')
 local dateu = require('smartplanner.util.date')
+local hl = require('smartplanner.ui.highlight')
 
 local M = { win = nil, buf = nil, visible = false }
 
@@ -24,6 +25,7 @@ local function render()
     lines[#lines + 1] = table.concat(row, ' ')
   end
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
+  hl.hl_line(M.buf, 0, 'SmartPlannerHeader')
 end
 
 local function open_float()
