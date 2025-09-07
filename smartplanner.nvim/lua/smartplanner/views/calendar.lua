@@ -62,6 +62,7 @@ local function render_month_grid(buf, date)
   local lines = { header_line(y, m), '' }
   lines[#lines + 1] = 'Mon   Tue   Wed   Thu   Fri   Sat   Sun'
   lines[#lines + 1] = ('-'):rep(60)
+  local base_line_index = #lines
   for _, week in ipairs(grid) do
     -- date row
     local drow = {}
@@ -94,6 +95,32 @@ local function render_month_grid(buf, date)
   -- Apply highlights to header and weekday row to match markdown colors
   hl.hl_line(buf, 0, 'SmartPlannerHeader')
   hl.hl_line(buf, 2, 'SmartPlannerWeekday')
+  -- Highlight cells: today, bands, singles
+  local today = dateu.today()
+  local line_idx = base_line_index
+  for w = 1, #grid do
+    local week = grid[w]
+    local date_line = line_idx + 1
+    local band_line = line_idx + 2
+    local single_line = line_idx + 3
+    for i, day in ipairs(week) do
+      local col_start = (i - 1) * 7
+      local col_end = col_start + 6
+      -- today label
+      if day == today then
+        hl.hl_match(buf, date_line - 1, col_start, col_end, 'SmartPlannerToday')
+      end
+      -- bands
+      local span_list, singles = cell_summary(day, month_tbl, sprints)
+      if #span_list > 0 then
+        hl.hl_match(buf, band_line - 1, col_start, col_end, 'SmartPlannerSpan')
+      end
+      if #singles > 0 then
+        hl.hl_match(buf, single_line - 1, col_start, col_end, 'SmartPlannerBullet')
+      end
+    end
+    line_idx = line_idx + 4
+  end
 end
 
 local function render_day_view(buf, date)
@@ -152,6 +179,18 @@ function M.open(opts)
   else
     render_month_grid(buf, today)
   end
+  -- buffer-local key to cycle view: \sc or <leader>sc
+  local function cycle()
+    local next_map = { month = 'week', week = 'day', day = 'month' }
+    local nxt = next_map[view] or 'month'
+    view = nxt
+    vim.api.nvim_buf_set_name(buf, 'SmartPlanner: Calendar (' .. view:gsub('^%l', string.upper) .. ')')
+    if view == 'day' then render_day_view(buf, today)
+    elseif view == 'week' then render_week_view(buf, today)
+    else render_month_grid(buf, today) end
+  end
+  vim.keymap.set('n', '\\sc', cycle, { buffer = buf, desc = 'SmartPlanner: Cycle calendar view' })
+  vim.keymap.set('n', '<leader>sc', cycle, { buffer = buf, desc = 'SmartPlanner: Cycle calendar view' })
   return buf
 end
 

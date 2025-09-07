@@ -10,6 +10,17 @@ function M.apply_defaults()
   map('n', '\\sp', function() require('smartplanner').open_planner({}) end, 'SmartPlanner: Open Planner')
   map('n', '\\sc', function() require('smartplanner').open_calendar({}) end, 'SmartPlanner: Open Calendar')
   map('n', '\\sm', function() require('smartplanner').toggle_mini({}) end, 'SmartPlanner: Toggle Mini Calendar')
+  map('n', '<leader>sc', function()
+    -- If calendar buffer, cycle; else open month
+    local name = vim.api.nvim_buf_get_name(0)
+    if name:match('SmartPlanner: Calendar') then
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('\\sc', true, false, true), 'n', false)
+    else
+      require('smartplanner').open_calendar({ view = 'month' })
+    end
+  end, 'SmartPlanner: Open/Cycle Calendar')
+  map('n', '<leader>sp', function() require('smartplanner').open_planner({}) end, 'SmartPlanner: Open Planner')
+  map('n', '<leader>sP', function() vim.cmd('SmartPlannerOpen planner_float') end, 'SmartPlanner: Open Planner (floating)')
   map('n', '\\sT', function() require('smartplanner').capture({ type = 'task' }) end, 'SmartPlanner: Capture Task')
   map('n', '\\sE', function() require('smartplanner').capture({ type = 'event' }) end, 'SmartPlanner: Capture Event')
   map('n', '\\sN', function() require('smartplanner').capture({ type = 'note' }) end, 'SmartPlanner: Capture Note')

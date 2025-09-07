@@ -17,7 +17,7 @@ return {
 
 ## Key Commands
 - Open Planner: `\sp`
-- Open Calendar: `\sc` (month). Week/Day: `:SmartPlannerOpen calendar week|day`.
+- Open Calendar: `\sc` (month). Week/Day: `:SmartPlannerOpen calendar week|day`. In a calendar buffer, `<leader>sc` cycles Month→Week→Day.
 - Mini Calendar: `\sm`
 - Capture: `:SmartPlannerCapture task|event|note|sprint`
 - Search: `:SmartPlannerSearch tasks|events|sprints`
@@ -28,6 +28,7 @@ return {
 - Reschedule: `\sr` on a task/event line
 - Reorder: `\su` / `\sd` within a day’s Tasks
 - Navigate days: `]d` / `[d`
+- Floating Planner: `<leader>sP` (Ctrl-C or `q` to close)
 
 ## Storage Layout
 - Year root: `~/.local/share/smartplanner/%Y/`

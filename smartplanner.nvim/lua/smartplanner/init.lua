@@ -5,6 +5,7 @@ local highlight = require('smartplanner.ui.highlight')
 local planner_view = require('smartplanner.views.planner')
 local calendar_view = require('smartplanner.views.calendar')
 local mini_view = require('smartplanner.views.mini')
+local planner_float = require('smartplanner.views.planner_float')
 local export_md = require('smartplanner.export.md')
 local export_csv = require('smartplanner.export.csv')
 
@@ -95,11 +96,13 @@ function M._register_commands()
       M.open_calendar({ date = date, view = mode })
     elseif view == 'mini' then
       M.toggle_mini({ date = args[2] })
+    elseif view == 'planner_float' then
+      planner_float.open({ date = args[2] })
     else
       vim.notify('Unknown view: ' .. view, vim.log.levels.ERROR)
     end
   end, { nargs = '*', complete = function(_, _)
-    return { 'planner', 'calendar', 'mini', 'month', 'week', 'day' }
+    return { 'planner', 'calendar', 'mini', 'planner_float', 'month', 'week', 'day' }
   end })
 
   create('SmartPlannerCapture', function(cmd)

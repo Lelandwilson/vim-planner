@@ -24,6 +24,8 @@ A modal-first planner for Neovim that unifies daily planning, todos, notes, spri
 
 ## Commands
 - `:SmartPlannerOpen [view=planner|calendar|mini] [date=YYYY-MM-DD]`
+- `:SmartPlannerOpen calendar [month|week|day] [date?]`
+- `:SmartPlannerOpen planner_float` — open planner in a floating modal (Ctrl-C to close)
 - `:SmartPlannerCapture [type=task|event|note|sprint] [date=...]`
 - `:SmartPlannerGoto [today|week|month|YYYY-MM-DD]`
 - `:SmartPlannerSearch [tasks|events|notes|sprints] [query=...]`
@@ -31,4 +33,10 @@ A modal-first planner for Neovim that unifies daily planning, todos, notes, spri
 - `:SmartPlannerConfig`
 - `:SmartPlannerSync`
 
-See `lua/smartplanner/` for module responsibilities mapped to the spec. Mini calendar: `\sm`. Month/Week/Day calendar: `:SmartPlannerOpen calendar week`.
+## Keymaps
+- `\\sp` open Planner; `<leader>sp` as alt
+- `\\sc` open Calendar; `<leader>sc` opens or cycles Month→Week→Day while focused
+- `\\sm` toggle Mini calendar
+- Floating Planner: `<leader>sP` (Ctrl-C or `q` to close)
+
+See `lua/smartplanner/` for module responsibilities mapped to the spec.
