@@ -73,8 +73,8 @@ local function render_month_grid(buf, date)
     -- top band summaries (spans)
     local brow = {}
     for _, day in ipairs(week) do
-      local spans = cell_summary(day, month_tbl, sprints)
-      local band = (#spans[1] or 0) > 0 and table.concat(spans[1], '|') or ' '
+      local span_list, _ = cell_summary(day, month_tbl, sprints)
+      local band = (#span_list > 0) and table.concat(span_list, '|') or ' '
       table.insert(brow, string.sub(string.format('%-6s', band), 1, 6))
     end
     lines[#lines + 1] = table.concat(brow, ' ')
