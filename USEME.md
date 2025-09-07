@@ -31,17 +31,57 @@ return {
 - Navigate days: `]d` / `[d`
 - Floating Planner: `<leader>sP` (Ctrl-C or `q` to close)
 
-## First-time Walkthrough
-1) Install and setup via Lazy.nvim as above, then restart Neovim.
-2) Open the Planner: press `\sp`. You’ll see the current month rendered with day sections.
-3) Add a Sprint: run `:SmartPlannerCapture sprint`, enter a name and start/end dates. It appears as a top-band in both Planner and Calendar.
-4) Add Tasks: `:SmartPlannerCapture task`, enter a title and date (e.g., today). It shows under that day’s Tasks and in the Calendar singles row.
-5) Add a Note: `:SmartPlannerCapture note`, pick a date and body. The note is saved as Markdown with YAML front-matter and indexed in the month shard.
-6) Calendar: press `\sc` for Month view. Cycle Month→Week→Day inside the calendar buffer using `\sc` or `<leader>sc`.
-7) Mini Calendar: toggle `\sm` to keep an at-a-glance month; it highlights the planner’s focus day.
-8) Quick Notes/Todos: toggle `\sq` to open a floating panel. Add quick todos/notes (`a`/`n`). Promote a quick todo to a dated task with `p` when you’re ready.
-9) Triage & Edit: in Planner, toggle a task’s status with `\sx`, reschedule with `\sr`, and reorder with `\su`/`\sd`.
-10) Export: `:SmartPlannerExport md` (or `csv`) to view/share.
+## First-time Walkthrough (step-by-step)
+Follow these exact steps to create a sprint, add tasks/notes, use the quick panel, and navigate/calendar/export.
+
+1) Open the Planner
+   - Press `\sp`.
+   - You’ll see “Planner — YYYY-MM” with day sections like `## 2025-09-07`.
+
+2) Create a Sprint (top-band across days)
+   - Run `:SmartPlannerCapture sprint`.
+   - Name: type `Sprint 9 — Incident Readiness` and press Enter.
+   - Start date: type today (e.g., `2025-09-15`) and Enter.
+   - End date: type `2025-09-26` and Enter.
+   - Result: the sprint band shows at the top of the Planner days it spans and appears in the Calendar’s band row.
+
+3) Add Two Dated Tasks
+   - Run `:SmartPlannerCapture task`.
+     - Title: `Draft incident response plan`
+     - Date: today (e.g., `2025-09-15`)
+   - Run `:SmartPlannerCapture task` again.
+     - Title: `Schedule tabletop exercise with team`
+     - Date: `2025-09-18`
+   - Result: tasks appear under their day’s “### Tasks” and in Calendar’s singles row.
+
+4) Add a Dated Note (Markdown with front‑matter)
+   - Run `:SmartPlannerCapture note`.
+     - Title: `Stakeholder briefing outline`
+     - Date: `2025-09-16`
+     - Body: paste a short outline, e.g.:
+       `Objectives: clarify roles; Risks: auth outage; Decisions: scope tabletop`
+   - Result: a Markdown file is written under the year’s `notes/` folder and linked in the day’s “### Notes”.
+
+5) Use the Quick Notes/Todos Panel (floating)
+   - Toggle `\sq`.
+   - Press `a` and type `Call vendor re. SSL expiry` → Enter (adds a quick todo).
+   - Press `n` and type `Questions for tabletop: comms channel, who signs off?` → Enter (adds a quick note).
+   - Move cursor to the quick todo line, press `p`, enter a date like `2025-09-17` → it’s promoted to a dated task and will show in Planner/Calendar.
+   - Toggle done with `x`, delete with `D`, close with `q` or Ctrl‑C.
+
+6) Navigate and Calendar Views
+   - Next/Prev day in Planner: `]d` / `[d`.
+   - Open Calendar: `\sc` (Month). Inside the calendar, press `\sc` (or `<leader>sc`) to cycle Month → Week → Day.
+   - Mini Calendar: `\sm` shows a top‑right month; the current planner focus day is highlighted.
+
+7) Edit and Reorder in Planner
+   - Toggle a task status: move cursor to a task line, press `\sx` (todo → doing → done).
+   - Reschedule: `\sr`, enter a new date (e.g., move tabletop exercise to `2025-09-19`).
+   - Reorder within the day: `\su` / `\sd`.
+
+8) Export a Report
+   - `:SmartPlannerExport md` opens a Markdown export of the current month (or set scope in code).
+   - `:SmartPlannerExport csv` opens a CSV snapshot of events/tasks/notes.
 
 ## Where Data Is Saved
 - Year root: `~/.local/share/smartplanner/%Y/`
