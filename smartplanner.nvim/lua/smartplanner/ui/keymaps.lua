@@ -35,6 +35,7 @@ function M.apply_defaults()
   map('n', '<leader>sr', function() require('smartplanner.views.planner').reschedule() end, 'SmartPlanner: Reschedule')
   map('n', '<leader>sk', function() require('smartplanner.views.planner').move_up() end, 'SmartPlanner: Move up')
   map('n', '<leader>sj', function() require('smartplanner.views.planner').move_down() end, 'SmartPlanner: Move down')
+  map('n', '<leader>sD', function() require('smartplanner.views.planner').delete_current() end, 'SmartPlanner: Delete current item')
 end
 
 function M.apply_custom(defs)

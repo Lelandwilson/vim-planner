@@ -186,4 +186,16 @@ function M.prev_day()
   M.goto_date(pd)
 end
 
+function M.delete_current()
+  local item = current_item()
+  if not item then return end
+  local ok = require('smartplanner.storage.fs').delete(item.id)
+  if ok then
+    vim.notify('Deleted item', vim.log.levels.INFO)
+    M.goto_date(item.date or (state.get_focus_day() or dateu.today()))
+  else
+    vim.notify('Delete failed', vim.log.levels.ERROR)
+  end
+end
+
 return M
