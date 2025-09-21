@@ -3,7 +3,41 @@ local idu = require('smartplanner.util.id')
 local store = require('smartplanner.storage.fs')
 local dateu = require('smartplanner.util.date')
 
-local M = { win = nil, buf = nil, index = {} }
+local M = { win = nil, buf = nil, index = {}, current_date = nil }
+
+local function render_day_section(lines, date)
+  local y, m = dateu.year_month(date)
+  local month = store.read_month(y, m)
+  lines[#lines + 1] = '## ' .. date .. ' — Day View'
+  local events = {}
+  for _, e in ipairs(month.events or {}) do
+    if (e.date == date) or (e.span and dateu.range_intersect(e.start_date, e.end_date, date, date)) then
+      events[#events + 1] = e
+    end
+  end
+  if #events > 0 then
+    lines[#lines + 1] = '### Events'
+    for _, e in ipairs(events) do lines[#lines + 1] = '- ' .. (e.title or e.id) end
+    lines[#lines + 1] = ''
+  end
+  local tasks = {}
+  for _, t in ipairs(month.tasks or {}) do if t.date == date then tasks[#tasks + 1] = t end end
+  if #tasks > 0 then
+    lines[#lines + 1] = '### Tasks'
+    for _, t in ipairs(tasks) do
+      local token = (t.status == 'done') and '[✓]' or '[ ]'
+      lines[#lines + 1] = '- ' .. token .. ' ' .. (t.title or t.id)
+    end
+    lines[#lines + 1] = ''
+  end
+  local notes = {}
+  for _, n in ipairs(month.notes_index or {}) do if n.date == date then notes[#notes + 1] = n end end
+  if #notes > 0 then
+    lines[#lines + 1] = '### Notes'
+    for _, n in ipairs(notes) do lines[#lines + 1] = '- ' .. (n.title or n.path) end
+    lines[#lines + 1] = ''
+  end
+end
 
 local function render()
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
@@ -12,6 +46,8 @@ local function render()
   local y = tonumber(os.date('%Y'))
   local inbox = store.query_quick(y)
   local lines = { '# Quick Notes & Todos (' .. y .. ')', '' }
+  lines[#lines + 1] = '_Keys: a add todo • n note • x toggle • p promote • D delete • ]d/[d next/prev day • g goto date • c clear date_'
+  lines[#lines + 1] = ''
   M.index = {}
   lines[#lines + 1] = '## Todos'
   for _, t in ipairs(inbox.quick_tasks or {}) do
@@ -24,6 +60,10 @@ local function render()
   for _, n in ipairs(inbox.quick_notes or {}) do
     lines[#lines + 1] = string.format('- %s', (n.title or n.body or ''))
     M.index[#lines] = { kind = 'note', id = n.id }
+  end
+  if M.current_date then
+    lines[#lines + 1] = ''
+    render_day_section(lines, M.current_date)
   end
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
   vim.api.nvim_buf_set_option(M.buf, 'filetype', 'markdown')
@@ -85,6 +125,28 @@ local function open_float()
     store.delete_quick(entry.id)
     render()
   end, { buffer = M.buf, desc = 'Delete quick item' })
+  -- Day navigation and date filter
+  vim.keymap.set('n', ']d', function()
+    M.current_date = M.current_date or dateu.today()
+    M.current_date = dateu.add_days(M.current_date, 1)
+    render()
+  end, { buffer = M.buf, desc = 'Next day (day view)' })
+  vim.keymap.set('n', '[d', function()
+    M.current_date = M.current_date or dateu.today()
+    M.current_date = dateu.add_days(M.current_date, -1)
+    render()
+  end, { buffer = M.buf, desc = 'Prev day (day view)' })
+  vim.keymap.set('n', 'g', function()
+    vim.ui.input({ prompt = 'Go to date (YYYY-MM-DD): ', default = dateu.today() }, function(d)
+      if not d or d == '' then return end
+      M.current_date = d
+      render()
+    end)
+  end, { buffer = M.buf, desc = 'Goto date (day view)' })
+  vim.keymap.set('n', 'c', function()
+    M.current_date = nil
+    render()
+  end, { buffer = M.buf, desc = 'Clear date (inbox only)' })
 end
 
 function M.toggle()

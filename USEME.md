@@ -19,7 +19,7 @@ return {
 - Planner: `<leader>sp` (floating: `<leader>sf`)
 - Calendar: `<leader>sc` Month (cycles when focused), `<leader>sw` Week, `<leader>sd` Day
 - Mini Calendar: `<leader>sm`
-- Quick Notes/Todos: `<leader>sq` (panel keys: a add todo, n note, x toggle done, p promote to dated task, D delete, q/Ctrl-C close)
+- Quick Notes/Todos: `<leader>sq` (panel keys: a add todo, n note, x toggle done, p promote to dated task, D delete, ]d/[d next/prev day, g goto date, c clear date, q/Ctrl-C close)
 - Capture: `:SmartPlannerCapture task|event|note|sprint`
 - Search: `:SmartPlannerSearch tasks|events|sprints`
 - Export: `:SmartPlannerExport md|csv`
