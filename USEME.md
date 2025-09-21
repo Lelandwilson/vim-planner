@@ -15,12 +15,11 @@ return {
 ```
 - Restart or `:Lazy sync`.
 
-## Key Commands
-- Open Planner: `\sp`
-- Open Calendar: `\sc` (month). Week/Day: `:SmartPlannerOpen calendar week|day`. In a calendar buffer, `<leader>sc` cycles Month→Week→Day.
-- Calendar shortcuts: `<leader>scm` month, `<leader>scw` week, `<leader>scd` day
-- Mini Calendar: `\sm`
-- Quick Notes/Todos: `\sq` (floating). In the panel: `a` add todo, `n` add note, `x` toggle done, `p` promote todo to dated task, `D` delete, `q`/Ctrl-C close
+- ## Key Commands (leader-based)
+- Planner: `<leader>sp` (floating: `<leader>sf`)
+- Calendar: `<leader>sc` Month (cycles when focused), `<leader>sw` Week, `<leader>sd` Day
+- Mini Calendar: `<leader>sm`
+- Quick Notes/Todos: `<leader>sq` (panel keys: a add todo, n note, x toggle done, p promote to dated task, D delete, q/Ctrl-C close)
 - Capture: `:SmartPlannerCapture task|event|note|sprint`
 - Search: `:SmartPlannerSearch tasks|events|sprints`
 - Export: `:SmartPlannerExport md|csv`
@@ -73,13 +72,13 @@ Follow these exact steps to create a sprint, add tasks/notes, use the quick pane
 
 6) Navigate and Calendar Views
    - Next/Prev day in Planner: `]d` / `[d`.
-   - Open Calendar: `\sc` (Month). Inside the calendar, press `\sc` (or `<leader>sc`) to cycle Month → Week → Day.
-   - Mini Calendar: `\sm` shows a top‑right month; the current planner focus day is highlighted.
+   - Open Calendar: `<leader>sc` (Month). Inside the calendar, press `<leader>sc` to cycle Month → Week → Day; or use `<leader>sw` / `<leader>sd` directly.
+   - Mini Calendar: `<leader>sm` shows a top‑right month; the current planner focus day is highlighted.
 
 7) Edit and Reorder in Planner
-   - Toggle a task status: move cursor to a task line, press `\sx` (todo → doing → done).
-   - Reschedule: `\sr`, enter a new date (e.g., move tabletop exercise to `2025-09-19`).
-   - Reorder within the day: `\su` / `\sd`.
+   - Toggle a task status: move cursor to a task line, press `<leader>sx` (todo → doing → done).
+   - Reschedule: `<leader>sr`, enter a new date (e.g., move tabletop exercise to `2025-09-19`).
+   - Reorder within the day: `<leader>sk` (up) / `<leader>sj` (down).
 
 8) Export a Report
    - `:SmartPlannerExport md` opens a Markdown export of the current month (or set scope in code).
