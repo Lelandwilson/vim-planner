@@ -209,6 +209,7 @@ local function render_month(buf, date)
     end
     local sprints = store.query_sprints and store.query_sprints({ range = { start = day, ['end'] = day } }) or {}
     local lines_ins = {}
+    local idx_map = {}
     local tasks, events, notes = daydata.tasks or {}, daydata.events or {}, daydata.notes or {}
     -- include sprints as events
     for _, sp in ipairs(sprints) do
@@ -231,6 +232,7 @@ local function render_month(buf, date)
         local badge = e.span and '[S]' or (e.allday and '[A]' or '[ ]')
         local time = (e.start_ts and not e.span and not e.allday) and (os.date('%H:%M', e.start_ts) .. ' ') or ''
         table.insert(lines_ins, string.format('- %s %s%s', badge, time, e.title or e.id))
+        idx_map[#lines_ins] = { type = 'event', id = e.id, date = day }
       end
       table.insert(lines_ins, '')
     end
@@ -239,12 +241,16 @@ local function render_month(buf, date)
       for _, t in ipairs(tasks) do
         local token = t.status == 'done' and '[✓]' or (t.status == 'doing' and '[~]' or (t.priority and t.priority > 2 and '[!!]' or '[ ]'))
         table.insert(lines_ins, string.format('- %s %s', token, t.title))
+        idx_map[#lines_ins] = { type = 'task', id = t.id, date = day }
       end
       table.insert(lines_ins, '')
     end
     if #notes > 0 then
       table.insert(lines_ins, '### Notes')
-      for _, n in ipairs(notes) do table.insert(lines_ins, string.format('- %s', n.path or n.title or n.id)) end
+      for _, n in ipairs(notes) do
+        table.insert(lines_ins, string.format('- %s', n.path or n.title or n.id))
+        idx_map[#lines_ins] = { type = 'note', id = n.id, date = day, path = n.path }
+      end
       table.insert(lines_ins, '')
     end
   if (#inst > 0) then
@@ -263,6 +269,10 @@ local function render_month(buf, date)
       vim.schedule(function()
         if vim.api.nvim_buf_is_valid(buf) then
           vim.api.nvim_buf_set_lines(buf, lnum, lnum, false, lines_ins)
+          local base = lnum + 1
+          for off, meta in pairs(idx_map) do
+            M.line_index[base + off - 1] = meta
+          end
         end
       end)
     end
@@ -461,6 +471,18 @@ function M.expand_range(start_day, end_day)
       end
     end
   end
+end
+
+function M.rename_current()
+  local item = current_item()
+  if not item or not (item.type == 'task' or item.type == 'event' or item.type == 'note') then return end
+  local line = vim.api.nvim_get_current_line()
+  local current = line:gsub('^- %[[^%]]-%]%s*', ''):gsub('^- %s*[%[%]SA ]*%s*', ''):gsub('^%- %s*', '')
+  vim.ui.input({ prompt = 'Rename label: ', default = current }, function(newlabel)
+    if not newlabel or newlabel == '' then return end
+    require('smartplanner.storage').update(item.id, { title = newlabel, label = newlabel })
+    M.goto_date(item.date or (state.get_focus_day() or dateu.today()))
+  end)
 end
 
 return M
