@@ -138,6 +138,27 @@ function M.query_deltas_for_day(day)
   return rows, inst
 end
 
+function M.query_day(day)
+  local t = exec([[SELECT * FROM items WHERE day = :d]], { d = day }) or {}
+  local tasks, events, notes = {}, {}, {}
+  for _, r in ipairs(t) do
+    if r.type == 'task' then
+      tasks[#tasks + 1] = { id = r.id, title = r.label, calendar = r.calendar, priority = r.priority, status = r.status, date = r.day, order_index = r.order_index, tags = {}, created_at = r.created_at, updated_at = r.updated_at }
+    elseif r.type == 'event' then
+      events[#events + 1] = { id = r.id, title = r.label, calendar = r.calendar, span = r.span == 1, start_date = r.start_ts and ymd(r.start_ts) or nil, end_date = r.end_ts and ymd(r.end_ts) or nil, date = r.day, priority = r.priority, order_index = r.order_index, allday = r.allday == 1 }
+    elseif r.type == 'note' then
+      notes[#notes + 1] = { id = r.id, date = r.day, path = r.label or ('note:' .. r.id), tags = {} }
+    end
+  end
+  -- add spans intersecting the day
+  local ts = os.time({ year = tonumber(day:sub(1,4)), month = tonumber(day:sub(6,7)), day = tonumber(day:sub(9,10)), hour = 12 })
+  local span_rows = exec([[SELECT * FROM items WHERE type='event' AND span=1 AND NOT (end_ts < :ts OR start_ts > :ts)]], { ts = ts }) or {}
+  for _, r in ipairs(span_rows) do
+    events[#events + 1] = { id = r.id, title = r.label, calendar = r.calendar, span = true, start_date = r.start_ts and ymd(r.start_ts) or nil, end_date = r.end_ts and ymd(r.end_ts) or nil, priority = r.priority, order_index = r.order_index, allday = (r.allday == 1) }
+  end
+  return { tasks = tasks, events = events, notes = notes }
+end
+
 -- Stubs for existing API to enable gradual migration; these can be filled next
 local function ymd(ts)
   local t = os.date('*t', ts)

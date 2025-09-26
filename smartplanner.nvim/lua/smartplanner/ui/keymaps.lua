@@ -23,6 +23,18 @@ function M.apply_defaults()
   map('n', '<leader>sd', function() require('smartplanner').open_calendar({ view = 'day' }) end, 'SmartPlanner: Calendar Day')
   map('n', '<leader>sm', function() require('smartplanner').toggle_mini({}) end, 'SmartPlanner: Toggle Mini Calendar')
   map('n', '<leader>sq', function() require('smartplanner').toggle_quicklist() end, 'SmartPlanner: Toggle Quick Notes/Todos')
+  -- Deltas
+  map('n', '<leader>zd', function() require('smartplanner.ui.delta').open() end, 'SmartPlanner: Delta Manager')
+  map('n', '<leader>zi', function()
+    local planner = require('smartplanner.views.planner')
+    local day = require('smartplanner.state').get_focus_day() or require('smartplanner.util.date').today()
+    local store = require('smartplanner.storage')
+    vim.ui.input({ prompt = 'Delta today (e.g., 1.0 hrs): ', default = '1.0' }, function(val)
+      local n = tonumber(val or '0') or 0
+      -- Prompt for which entry? For now, open manager to pick. Future: picker.
+      require('smartplanner.ui.delta').open()
+    end)
+  end, 'SmartPlanner: Add Delta Instance')
   -- Capture
   map('n', '<leader>st', function() require('smartplanner').capture({ type = 'task' }) end, 'SmartPlanner: Capture Task')
   map('n', '<leader>se', function() require('smartplanner').capture({ type = 'event' }) end, 'SmartPlanner: Capture Event')

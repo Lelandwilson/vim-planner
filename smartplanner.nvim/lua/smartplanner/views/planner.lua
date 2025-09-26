@@ -124,13 +124,116 @@ end
 
 local function render_month(buf, date)
   local y, m = dateu.year_month(date)
-  local month_tbl = store.read_month(y, m)
   local days = dateu.month_days(y, m)
-  local sprints = load_sprints(y)
   M.line_index = {}
   local lines = { string.format('# Planner — %04d-%02d', y, m), '' }
-  for _, d in ipairs(days) do render_day(lines, d, month_tbl, sprints) end
+  -- headings only (collapsed by default)
+  for _, d in ipairs(days) do
+    local header = string.format('## ---- %s %s -------------------------------------', dateu.day_name(d), dateu.ddmmyy(d))
+    lines[#lines + 1] = header
+    -- leave collapsed; expand on demand
+  end
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  -- buffer-local mappings for toggling
+  local function toggle_current_day()
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    -- find header line
+    while lnum > 1 do
+      local line = vim.api.nvim_buf_get_lines(buf, lnum - 1, lnum, false)[1]
+      if line:match('^## %-%-') then break end
+      lnum = lnum - 1
+    end
+    local header = vim.api.nvim_buf_get_lines(buf, lnum - 1, lnum, false)[1]
+    local dd, mm, yy = header:match('(%d%d)/(%d%d)/(%d%d)')
+    if not dd then return end
+    local yyyy = tostring(2000 + tonumber(yy))
+    local day = string.format('%s-%s-%s', yyyy, mm, dd)
+    -- check if already expanded (look ahead for a section marker)
+    local next_line = vim.api.nvim_buf_get_lines(buf, lnum, lnum + 1, false)[1]
+    if next_line and next_line:match('^### ') then
+      -- collapse: delete until next header or end
+      local end_ln = lnum
+      local total = vim.api.nvim_buf_line_count(buf)
+      local i = lnum + 1
+      while i <= total do
+        local s = vim.api.nvim_buf_get_lines(buf, i - 1, i, false)[1]
+        if s:match('^## %-%-') then break end
+        end_ln = i
+        i = i + 1
+      end
+      if end_ln > lnum then
+        vim.api.nvim_buf_set_lines(buf, lnum, end_ln, false, {})
+      end
+      return
+    end
+    -- expand: fetch from storage and insert sections
+    local daydata
+    if store.query_day then
+      daydata = store.query_day(day)
+    else
+      local y, m = dateu.year_month(day)
+      local month_tbl = store.read_month(y, m)
+      daydata = { tasks = {}, events = {}, notes = {} }
+      for _, t in ipairs(month_tbl.tasks or {}) do if t.date == day then table.insert(daydata.tasks, t) end end
+      for _, e in ipairs(month_tbl.events or {}) do if (e.date == day) or (e.span and dateu.range_intersect(e.start_date, e.end_date, day, day)) then table.insert(daydata.events, e) end end
+      for _, n in ipairs(month_tbl.notes_index or {}) do if n.date == day then table.insert(daydata.notes, n) end end
+    end
+    local sprints = store.query_sprints and store.query_sprints({ range = { start = day, ['end'] = day } }) or {}
+    local lines_ins = {}
+    local tasks, events, notes = daydata.tasks or {}, daydata.events or {}, daydata.notes or {}
+    -- include sprints as events
+    for _, sp in ipairs(sprints) do
+      local sd = sp.start_date or (sp.start_ts and os.date('%Y-%m-%d', sp.start_ts))
+      local ed = sp.end_date or (sp.end_ts and os.date('%Y-%m-%d', sp.end_ts))
+      if sd and ed and dateu.range_intersect(sd, ed, day, day) then
+        table.insert(events, { id = sp.id, title = sp.name, span = true, start_date = sd, end_date = ed, priority = sp.priority or 0 })
+      end
+    end
+    -- Deltas
+    local deltas, inst = {}, {}
+    local ok, r1, r2 = pcall(function()
+      if store.query_deltas_for_day then return store.query_deltas_for_day(day) end
+    end)
+    if ok and r1 then deltas, inst = r1, r2 end
+    -- build sections
+    if #events > 0 then
+      table.insert(lines_ins, '### Events')
+      for _, e in ipairs(events) do
+        local badge = e.span and '[S]' or (e.allday and '[A]' or '[ ]')
+        table.insert(lines_ins, string.format('- %s %s', badge, e.title or e.id))
+      end
+      table.insert(lines_ins, '')
+    end
+    if #tasks > 0 then
+      table.insert(lines_ins, '### Tasks')
+      for _, t in ipairs(tasks) do
+        local token = t.status == 'done' and '[✓]' or (t.status == 'doing' and '[~]' or (t.priority and t.priority > 2 and '[!!]' or '[ ]'))
+        table.insert(lines_ins, string.format('- %s %s', token, t.title))
+      end
+      table.insert(lines_ins, '')
+    end
+    if #notes > 0 then
+      table.insert(lines_ins, '### Notes')
+      for _, n in ipairs(notes) do table.insert(lines_ins, string.format('- %s', n.path or n.title or n.id)) end
+      table.insert(lines_ins, '')
+    end
+    if (#deltas > 0) or (#inst > 0) then
+      table.insert(lines_ins, '### Deltas')
+      for _, d in ipairs(deltas) do
+        local value = (d.delta_sec or 0) / 3600.0
+        table.insert(lines_ins, string.format('- %s: +%.2f %s', d.label or 'Delta', value, d.time_unit or 'hrs'))
+      end
+      for _, di in ipairs(inst) do
+        local value = (di.delta_sec or 0) / 3600.0
+        table.insert(lines_ins, string.format('- %s (entry): +%.2f %s', di.label or 'Delta', value, di.time_unit or 'hrs'))
+      end
+      table.insert(lines_ins, '')
+    end
+    if #lines_ins > 0 then
+      vim.api.nvim_buf_set_lines(buf, lnum, lnum, false, lines_ins)
+    end
+  end
+  vim.keymap.set('n', '<CR>', toggle_current_day, { buffer = buf, desc = 'SmartPlanner: toggle day' })
 end
 
 function M.open(opts)

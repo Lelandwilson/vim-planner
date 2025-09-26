@@ -367,4 +367,9 @@ function M.query_sprints(q)
   return res
 end
 
+-- Delta API compatibility (no-op for FS backend)
+function M.query_deltas_for_day(day)
+  return {}, {}
+end
+
 return M
