@@ -226,18 +226,18 @@ local function render_month(buf, date)
       for _, n in ipairs(notes) do table.insert(lines_ins, string.format('- %s', n.path or n.title or n.id)) end
       table.insert(lines_ins, '')
     end
-    if (#deltas > 0) or (#inst > 0) then
-      table.insert(lines_ins, '### Deltas')
-      for _, d in ipairs(deltas) do
-        local value = (d.delta_sec or 0) / 3600.0
-        table.insert(lines_ins, string.format('- %s: +%.2f %s', d.label or 'Delta', value, d.time_unit or 'hrs'))
-      end
-      for _, di in ipairs(inst) do
-        local value = (di.delta_sec or 0) / 3600.0
-        table.insert(lines_ins, string.format('- %s (entry): +%.2f %s', di.label or 'Delta', value, di.time_unit or 'hrs'))
-      end
-      table.insert(lines_ins, '')
+  if (#inst > 0) then
+    table.insert(lines_ins, '### Deltas')
+    for _, di in ipairs(inst) do
+      local value = (di.delta_sec or 0) / 3600.0
+      table.insert(lines_ins, string.format('- %s (entry): +%.2f %s', di.label or 'Delta', value, di.time_unit or 'hrs'))
     end
+    table.insert(lines_ins, '')
+  end
+  if #lines_ins == 0 then
+    table.insert(lines_ins, '_(no items)_')
+    table.insert(lines_ins, '')
+  end
     if #lines_ins > 0 then
       vim.api.nvim_buf_set_lines(buf, lnum, lnum, false, lines_ins)
     end

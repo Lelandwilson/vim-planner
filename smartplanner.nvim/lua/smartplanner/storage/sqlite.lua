@@ -128,14 +128,11 @@ function M.add_delta_instance(inst)
 end
 
 function M.query_deltas_for_day(day)
-  -- defaults + instances
-  local ts_start = tonumber(os.time({ year = tonumber(day:sub(1,4)), month = tonumber(day:sub(6,7)), day = tonumber(day:sub(9,10)), hour = 12 }))
-  local rows = exec([[SELECT id,label,time_unit,delta_sec,start_ts,end_ts FROM delta_entries
-                      WHERE (end_ts IS NULL OR end_ts >= :ts) AND start_ts <= :ts]], { ts = ts_start }) or {}
+  -- Only return per-day instances; delta_entries serve as templates
   local inst = exec([[SELECT di.*, de.label, de.time_unit FROM delta_instances di
                       JOIN delta_entries de ON de.id = di.delta_entry_id
                       WHERE di.day = :day]], { day = day }) or {}
-  return rows, inst
+  return {}, inst
 end
 
 function M.query_day(day)
