@@ -16,6 +16,22 @@ local function header_for_day(day)
   return base .. string.rep('-', pad)
 end
 
+local function header_day_from_line(line)
+  local dd, mm, yy = line:match('(%d%d)/(%d%d)/(%d%d)')
+  if not dd then return nil end
+  local yyyy = tostring(2000 + tonumber(yy))
+  return string.format('%s-%s-%s', yyyy, mm, dd)
+end
+
+local function find_header_up(buf, lnum)
+  while lnum > 1 do
+    local line = vim.api.nvim_buf_get_lines(buf, lnum - 1, lnum, false)[1]
+    if line and line:match('^## %-%-') then return lnum, line end
+    lnum = lnum - 1
+  end
+  return nil
+end
+
 local function ensure_buf(title)
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
     vim.cmd('tabnew')
@@ -247,18 +263,40 @@ end
 
 function M.open(opts)
   local buf = ensure_buf('Planner')
-  local day = opts.date or dateu.today()
+  local remembered = require('smartplanner.state').get_last_planner_day()
+  local day = opts.date or remembered or dateu.today()
   state.set_focus_day(day)
   render_month(buf, day)
   -- Sync mini on scroll/cursor
   vim.api.nvim_create_autocmd({ 'WinScrolled', 'CursorMoved' }, {
     buffer = buf,
     callback = function()
-      state.set_focus_day(day)
+      local cur = vim.api.nvim_win_get_cursor(0)[1]
+      local hln, line = find_header_up(buf, cur)
+      if line then
+        local d = header_day_from_line(line)
+        if d then
+          state.set_focus_day(d)
+          state.set_last_planner_day(d)
+        end
+      end
       local ok, mini = pcall(require, 'smartplanner.views.mini')
       if ok then mini.sync_focus() end
     end,
   })
+  -- Center on remembered day header
+  local total = vim.api.nvim_buf_line_count(buf)
+  for i = 1, total do
+    local line = vim.api.nvim_buf_get_lines(buf, i - 1, i, false)[1]
+    if line and line:match('^## %-%-') then
+      local d = header_day_from_line(line)
+      if d == day then
+        vim.api.nvim_win_set_cursor(0, { i, 0 })
+        vim.cmd('normal! zz')
+        break
+      end
+    end
+  end
   return buf
 end
 
