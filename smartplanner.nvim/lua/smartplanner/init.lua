@@ -147,6 +147,20 @@ function M._register_commands()
   create('SmartPlannerSync', function()
     require('smartplanner.views.mini').sync_focus()
   end, {})
+
+  create('SmartPlannerMigrate', function(cmd)
+    local dir = (cmd.fargs[1] or 'fs->sqlite')
+    if dir ~= 'fs->sqlite' then
+      vim.notify('Usage: :SmartPlannerMigrate fs->sqlite', vim.log.levels.WARN)
+      return
+    end
+    local st = require('smartplanner.storage')
+    if type(st.migrate_from_fs) == 'function' then
+      st.migrate_from_fs()
+    else
+      vim.notify('Storage backend does not support migration', vim.log.levels.ERROR)
+    end
+  end, { nargs = '?' })
 end
 
 return M

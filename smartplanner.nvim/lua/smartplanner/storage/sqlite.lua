@@ -355,4 +355,29 @@ function M.add_quick_note() return false end
 function M.update_quick() return false end
 function M.delete_quick() return false end
 
+-- Migration from FS shards to SQLite
+function M.migrate_from_fs()
+  local fs = require('smartplanner.storage.fs')
+  -- naive: import current year and neighbors
+  local y = tonumber(os.date('%Y'))
+  for year = y - 1, y + 1 do
+    for m = 1, 12 do
+      local month = fs.read_month(year, m)
+      if month and ((month.tasks and #month.tasks > 0) or (month.events and #month.events > 0) or (month.notes_index and #month.notes_index > 0)) then
+        for _, t in ipairs(month.tasks or {}) do M.add_task({ id = t.id, title = t.title, date = t.date, status = t.status, priority = t.priority, order_index = t.order_index, calendar = t.calendar, tags = t.tags }) end
+        for _, e in ipairs(month.events or {}) do
+          if e.span then M.add_event({ id = e.id, title = e.title, span = true, start_date = e.start_date, end_date = e.end_date, priority = e.priority, order_index = e.order_index, calendar = e.calendar })
+          else M.add_event({ id = e.id, title = e.title, date = e.date, allday = e.allday, priority = e.priority, order_index = e.order_index, calendar = e.calendar }) end
+        end
+        for _, n in ipairs(month.notes_index or {}) do M.add_note({ id = n.id, title = n.title or n.path, date = n.date, body = '' }) end
+      end
+    end
+    -- sprints
+    for _, sp in ipairs(fs.query_sprints({ range = { start = string.format('%04d-01-01', year), ['end'] = string.format('%04d-12-31', year) } }) or {}) do
+      M.add_sprint(sp)
+    end
+  end
+  vim.notify('SmartPlanner: Migration fs->sqlite complete', vim.log.levels.INFO)
+end
+
 return M

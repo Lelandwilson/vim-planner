@@ -26,16 +26,13 @@ end
 
 local function collect_for_month(y, m)
   local month_tbl = store.read_month(y, m)
-  -- load sprints
-  local s_raw = (function()
-    local ok, tbl = pcall(function()
-      local root = (require('smartplanner.config').get().year_root):gsub('%%Y', tostring(y))
-      local data = require('smartplanner.util.fs').read_file(root .. '/sprints.json')
-      return data and (require('smartplanner.util.json').decode(data) or { sprints = {} }) or { sprints = {} }
-    end)
-    if ok then return tbl else return { sprints = {} } end
-  end)()
-  return month_tbl, (s_raw.sprints or {})
+  local start = string.format('%04d-%02d-01', y, m)
+  local next_month = m == 12 and string.format('%04d-01-01', y + 1) or string.format('%04d-%02d-01', y, m + 1)
+  local sprints = {}
+  if store.query_sprints then
+    sprints = store.query_sprints({ range = { start = start, ['end'] = next_month } }) or {}
+  end
+  return month_tbl, sprints
 end
 
 local function cell_summary(day, month_tbl, sprints)

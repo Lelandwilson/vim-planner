@@ -334,4 +334,77 @@ function M.delete_current()
   end
 end
 
+-- Helper: toggle at a given header line by simulating <CR>
+local function toggle_at_line(lnum)
+  if not M.buf then return end
+  local cur = vim.api.nvim_win_get_cursor(0)
+  vim.api.nvim_win_set_cursor(0, { lnum, 0 })
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<CR>', true, false, true), 'n', false)
+  vim.api.nvim_win_set_cursor(0, cur)
+end
+
+local function line_is_header(lnum)
+  local s = vim.api.nvim_buf_get_lines(M.buf, lnum - 1, lnum, false)[1]
+  return s and s:match('^## %-%-') ~= nil
+end
+
+local function header_is_expanded(lnum)
+  local next_line = vim.api.nvim_buf_get_lines(M.buf, lnum, lnum + 1, false)[1]
+  return next_line and next_line:match('^### ') ~= nil
+end
+
+function M.collapse_all()
+  if not M.buf then return end
+  local total = vim.api.nvim_buf_line_count(M.buf)
+  for i = 1, total do
+    if line_is_header(i) and header_is_expanded(i) then
+      toggle_at_line(i)
+    end
+  end
+end
+
+function M.expand_week()
+  if not M.buf then return end
+  local focus = state.get_focus_day() or dateu.today()
+  local function to_ts(s) return os.time({ year = tonumber(s:sub(1,4)), month = tonumber(s:sub(6,7)), day = tonumber(s:sub(9,10)), hour = 12 }) end
+  local total = vim.api.nvim_buf_line_count(M.buf)
+  for i = 1, total do
+    if line_is_header(i) then
+      local line = vim.api.nvim_buf_get_lines(M.buf, i - 1, i, false)[1]
+      local dd, mm, yy = line:match('(%d%d)/(%d%d)/(%d%d)')
+      if dd then
+        local yyyy = tostring(2000 + tonumber(yy))
+        local day = string.format('%s-%s-%s', yyyy, mm, dd)
+        local diff = math.abs((to_ts(day) - to_ts(focus)) / (24*3600))
+        if diff <= 3 and not header_is_expanded(i) then
+          toggle_at_line(i)
+        end
+      end
+    end
+  end
+end
+
+function M.expand_range(start_day, end_day)
+  if not M.buf then return end
+  if not start_day or not end_day then return end
+  local function to_ts(s) return os.time({ year = tonumber(s:sub(1,4)), month = tonumber(s:sub(6,7)), day = tonumber(s:sub(9,10)), hour = 12 }) end
+  local st, en = to_ts(start_day), to_ts(end_day)
+  if en < st then st, en = en, st end
+  local total = vim.api.nvim_buf_line_count(M.buf)
+  for i = 1, total do
+    if line_is_header(i) then
+      local line = vim.api.nvim_buf_get_lines(M.buf, i - 1, i, false)[1]
+      local dd, mm, yy = line:match('(%d%d)/(%d%d)/(%d%d)')
+      if dd then
+        local yyyy = tostring(2000 + tonumber(yy))
+        local day = string.format('%s-%s-%s', yyyy, mm, dd)
+        local ts = to_ts(day)
+        if ts >= st and ts <= en and not header_is_expanded(i) then
+          toggle_at_line(i)
+        end
+      end
+    end
+  end
+end
+
 return M

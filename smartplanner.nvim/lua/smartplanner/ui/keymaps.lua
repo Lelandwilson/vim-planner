@@ -47,6 +47,22 @@ function M.apply_defaults()
   map('n', '<leader>sr', function() require('smartplanner.views.planner').reschedule() end, 'SmartPlanner: Reschedule')
   map('n', '<leader>sk', function() require('smartplanner.views.planner').move_up() end, 'SmartPlanner: Move up')
   map('n', '<leader>sj', function() require('smartplanner.views.planner').move_down() end, 'SmartPlanner: Move down')
+  map('n', '<leader>zA', function() require('smartplanner.views.planner').collapse_all() end, 'SmartPlanner: Collapse all days')
+  map('n', '<leader>zW', function() require('smartplanner.views.planner').expand_week() end, 'SmartPlanner: Expand current week')
+  map('n', '<leader>zR', function()
+    local dateu = require('smartplanner.util.date')
+    local start
+    vim.ui.input({ prompt = 'Start date (YYYY-MM-DD): ', default = dateu.today() }, function(s) start = s end)
+    if not start or start == '' then return end
+    vim.schedule(function()
+      local finish
+      vim.ui.input({ prompt = 'End date (YYYY-MM-DD): ', default = start }, function(e)
+        finish = e
+        if not finish or finish == '' then return end
+        require('smartplanner.views.planner').expand_range(start, finish)
+      end)
+    end)
+  end, 'SmartPlanner: Expand date range')
   map('n', '<leader>sD', function() require('smartplanner.views.planner').delete_current() end, 'SmartPlanner: Delete current item')
 end
 
