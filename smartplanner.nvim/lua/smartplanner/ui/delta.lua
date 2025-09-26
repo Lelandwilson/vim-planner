@@ -74,6 +74,27 @@ end
 
 function M.open() open() end
 
+function M.add_instance_for_day(day)
+  local entries = (store.list_delta_entries and store.list_delta_entries()) or {}
+  if #entries == 0 then
+    vim.notify('No delta entries. Press <leader>zd to add one.', vim.log.levels.INFO)
+    return
+  end
+  local items = {}
+  for _, e in ipairs(entries) do
+    local val = (e.delta_sec or 0) / 3600.0
+    table.insert(items, { text = string.format('%s (+%.2f %s)', e.label or 'Delta', val, e.time_unit or 'hrs'), id = e.id, time_unit = e.time_unit or 'hrs' })
+  end
+  vim.ui.select(items, { prompt = 'Select delta entry:' , format_item = function(it) return it.text end }, function(choice)
+    if not choice then return end
+    vim.ui.input({ prompt = string.format('Delta for %s (e.g., 1.0 %s): ', day, choice.time_unit), default = '1.0' }, function(val)
+      local n = tonumber(val or '0') or 0
+      if store.add_delta_instance then store.add_delta_instance({ delta_entry_id = choice.id, day = day, delta_sec = math.floor(n * 3600), note = '' }) end
+      vim.notify(string.format('Added delta %.2f %s on %s', n, choice.time_unit, day), vim.log.levels.INFO)
+    end)
+  end)
+end
+
 function M.close()
   if M.win and vim.api.nvim_win_is_valid(M.win) then vim.api.nvim_win_close(M.win, true) end
   M.win, M.buf = nil, nil
