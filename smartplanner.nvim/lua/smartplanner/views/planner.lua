@@ -1,7 +1,7 @@
 -- Planner view (§2.2 Planner View)
 local state = require('smartplanner.state')
 local dateu = require('smartplanner.util.date')
-local store = require('smartplanner.storage.fs')
+local store = require('smartplanner.storage')
 
 local M = { buf = nil, line_index = {} }
 
@@ -87,6 +87,27 @@ local function render_day(lines, day, month_tbl, sprints)
     end
     lines[#lines + 1] = ''
   end
+  -- Deltas section (sqlite backend populates; fs backend returns empty)
+  local deltas, instances = {}, {}
+  local ok, rows, inst = pcall(function()
+    if store.query_deltas_for_day then
+      local r, i = store.query_deltas_for_day(day)
+      return r or {}, i or {}
+    end
+  end)
+  if ok and rows then deltas, instances = rows, inst end
+  if (#deltas > 0) or (#instances > 0) then
+    lines[#lines + 1] = '### Deltas'
+    for _, d in ipairs(deltas) do
+      local value = (d.delta_sec or 0) / 3600.0
+      lines[#lines + 1] = string.format('- %s: +%.2f %s', d.label or 'Delta', value, d.time_unit or 'hrs')
+    end
+    for _, di in ipairs(instances) do
+      local value = (di.delta_sec or 0) / 3600.0
+      lines[#lines + 1] = string.format('- %s (entry): +%.2f %s', di.label or 'Delta', value, di.time_unit or 'hrs')
+    end
+    lines[#lines + 1] = ''
+  end
 end
 
 local function load_sprints(year)
@@ -148,7 +169,7 @@ function M.toggle_status()
   if not item or item.type ~= 'task' then return end
   -- naive cycle: todo -> doing -> done -> todo
   local update
-  local now = require('smartplanner.storage.fs')
+  local now = require('smartplanner.storage')
   -- fetch and toggle via update
   local next_status = { todo = 'doing', doing = 'done', done = 'todo' }
   update = now.update(item.id, { status = next_status['todo'] }) -- default
@@ -167,7 +188,7 @@ function M.reschedule()
   if not item or (item.type ~= 'task' and item.type ~= 'event') then return end
   vim.ui.input({ prompt = 'New date (YYYY-MM-DD): ', default = state.get_focus_day() or dateu.today() }, function(val)
     if not val or val == '' then return end
-    require('smartplanner.storage.fs').move(item.id, { date = val, start_date = val })
+    require('smartplanner.storage').move(item.id, { date = val, start_date = val })
     M.goto_date(val)
   end)
 end
@@ -175,14 +196,14 @@ end
 function M.move_up()
   local item = current_item()
   if not item or item.type ~= 'task' then return end
-  require('smartplanner.storage.fs').reorder_task(item.date, item.id, 'up')
+  require('smartplanner.storage').reorder_task(item.date, item.id, 'up')
   M.goto_date(item.date)
 end
 
 function M.move_down()
   local item = current_item()
   if not item or item.type ~= 'task' then return end
-  require('smartplanner.storage.fs').reorder_task(item.date, item.id, 'down')
+  require('smartplanner.storage').reorder_task(item.date, item.id, 'down')
   M.goto_date(item.date)
 end
 
@@ -201,7 +222,7 @@ end
 function M.delete_current()
   local item = current_item()
   if not item then return end
-  local ok = require('smartplanner.storage.fs').delete(item.id)
+  local ok = require('smartplanner.storage').delete(item.id)
   if ok then
     vim.notify('Deleted item', vim.log.levels.INFO)
     M.goto_date(item.date or (state.get_focus_day() or dateu.today()))
