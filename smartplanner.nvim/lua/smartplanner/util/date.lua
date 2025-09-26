@@ -37,6 +37,18 @@ function M.weekday(yyyy_mm_dd)
   return w
 end
 
+local DAY_NAMES = { 'SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY' }
+
+function M.day_name(yyyy_mm_dd)
+  local w = M.weekday(yyyy_mm_dd) -- 1..7
+  return DAY_NAMES[w] or 'DAY'
+end
+
+function M.ddmmyy(yyyy_mm_dd)
+  local y, m, d = M.parse(yyyy_mm_dd)
+  return string.format('%02d/%02d/%02d', d, m, y % 100)
+end
+
 function M.month_days(year, month)
   local days = {}
   local first = to_time(year, month, 1)

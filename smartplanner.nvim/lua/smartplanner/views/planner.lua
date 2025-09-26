@@ -12,6 +12,17 @@ local function ensure_buf(title)
     vim.api.nvim_buf_set_option(M.buf, 'bufhidden', 'wipe')
     vim.api.nvim_buf_set_option(M.buf, 'filetype', 'markdown')
     vim.api.nvim_buf_set_name(M.buf, 'SmartPlanner: ' .. title)
+    -- Make headings foldable with Treesitter if available
+    pcall(vim.api.nvim_buf_set_option, M.buf, 'foldenable', true)
+    pcall(vim.api.nvim_buf_set_option, M.buf, 'foldlevel', 1)
+    local ok = pcall(function()
+      vim.api.nvim_buf_set_option(M.buf, 'foldmethod', 'expr')
+      vim.api.nvim_buf_set_option(M.buf, 'foldexpr', 'nvim_treesitter#foldexpr()')
+    end)
+    if not ok then
+      -- Fallback minimal folding by indent
+      pcall(vim.api.nvim_buf_set_option, M.buf, 'foldmethod', 'indent')
+    end
   end
   return M.buf
 end
@@ -31,7 +42,8 @@ local function sort_items(tasks, events, notes)
 end
 
 local function render_day(lines, day, month_tbl, sprints)
-  lines[#lines + 1] = string.format('## %s', day)
+  local header = string.format('## ---- %s %s -------------------------------------', dateu.day_name(day), dateu.ddmmyy(day))
+  lines[#lines + 1] = header
   -- Split items for this day
   local tasks, events, notes = {}, {}, {}
   for _, t in ipairs(month_tbl.tasks or {}) do if t.date == day then tasks[#tasks + 1] = t end end
