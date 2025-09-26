@@ -229,7 +229,8 @@ local function render_month(buf, date)
       table.insert(lines_ins, '### Events')
       for _, e in ipairs(events) do
         local badge = e.span and '[S]' or (e.allday and '[A]' or '[ ]')
-        table.insert(lines_ins, string.format('- %s %s', badge, e.title or e.id))
+        local time = (e.start_ts and not e.span and not e.allday) and (os.date('%H:%M', e.start_ts) .. ' ') or ''
+        table.insert(lines_ins, string.format('- %s %s%s', badge, time, e.title or e.id))
       end
       table.insert(lines_ins, '')
     end

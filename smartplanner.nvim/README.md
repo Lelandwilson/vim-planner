@@ -45,7 +45,7 @@ A modal-first planner for Neovim that unifies daily planning, todos, notes, spri
 - Calendar: `<leader>sc` Month (cycles when focused), `<leader>sw` Week, `<leader>sd` Day
 - Mini: `<leader>sm` toggle; Quick Inbox: `<leader>sq` (a add todo, n note, x toggle, p promote, D delete, ]d/[d day, g goto date, c clear)
 - Capture: `<leader>st` task, `<leader>se` event, `<leader>sn` note, `<leader>ss` sprint
-- Planner actions: `]d`/`[d` next/prev day, `<leader>sx` toggle status, `<leader>sr` reschedule, `<leader>sk`/`<leader>sj` reorder, `<leader>sD` delete
+- Planner actions: `<leader>sl` next day / `<leader>sh` prev day, `<leader>sx` toggle status, `<leader>sr` reschedule, `<leader>sk`/`<leader>sj` reorder, `<leader>sD` delete
 - Folding (Planner): `<leader>zA` collapse all, `<leader>zW` expand current week, `<leader>zR` expand date range
 - Deltas: `<leader>zd` Delta Manager, `<leader>zi` add per-day instance for focused day
 

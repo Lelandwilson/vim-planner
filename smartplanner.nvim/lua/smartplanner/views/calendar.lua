@@ -46,7 +46,8 @@ local function cell_summary(day, month_tbl, sprints)
     if e.span and dateu.range_intersect(e.start_date, e.end_date, day, day) then
       spans[#spans + 1] = 'E:' .. (e.title or e.id)
     elseif (e.date == day) and not e.span then
-      singles[#singles + 1] = 'E:' .. (e.title or e.id)
+      local time = e.start_ts and os.date('%H:%M', e.start_ts)
+      singles[#singles + 1] = time or ('E:' .. (e.title or e.id))
     end
   end
   for _, t in ipairs(month_tbl.tasks or {}) do if t.date == day then singles[#singles + 1] = 'T:' .. t.title end end

@@ -182,7 +182,7 @@ function M.read_month(year, month)
     if r.type == 'task' then
       table.insert(tasks, { id = r.id, title = r.label, calendar = r.calendar, priority = r.priority, status = r.status, date = r.day, order_index = r.order_index, tags = {}, created_at = r.created_at, updated_at = r.updated_at })
     elseif r.type == 'event' then
-      table.insert(events, { id = r.id, title = r.label, calendar = r.calendar, span = r.span == 1, start_date = r.start_ts and ymd(r.start_ts) or nil, end_date = r.end_ts and ymd(r.end_ts) or nil, date = r.day, priority = r.priority, order_index = r.order_index })
+      table.insert(events, { id = r.id, title = r.label, calendar = r.calendar, span = r.span == 1, start_date = r.start_ts and ymd(r.start_ts) or nil, end_date = r.end_ts and ymd(r.end_ts) or nil, date = r.day, priority = r.priority, order_index = r.order_index, start_ts = r.start_ts, end_ts = r.end_ts, allday = r.allday == 1 })
     elseif r.type == 'note' then
       table.insert(notes_index, { id = r.id, date = r.day, path = r.label or ('note:' .. r.id), tags = {} })
     end

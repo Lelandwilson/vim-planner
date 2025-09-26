@@ -29,7 +29,7 @@ With the default prefix `<leader>s`:
 - Mini calendar: `<leader>sm` toggle
 - Quick inbox: `<leader>sq` (a add todo, n note, x toggle, p promote, D delete, ]d/[d next/prev day, g goto date, c clear date)
 - Capture: `<leader>st` task, `<leader>se` event, `<leader>sn` note, `<leader>ss` sprint
-- Planner actions: `]d`/`[d`, `<leader>sx` toggle, `<leader>sr` reschedule, `<leader>sk`/`<leader>sj` reorder, `<leader>sD` delete
+- Planner actions: `<leader>sl` next day / `<leader>sh` prev day, `<leader>sx` toggle, `<leader>sr` reschedule, `<leader>sk`/`<leader>sj` reorder, `<leader>sD` delete
 - Folding: `<leader>zA` collapse all, `<leader>zW` expand current week, `<leader>zR` expand date range
 - Deltas: `<leader>zd` Delta Manager, `<leader>zi` add instance for focused day
 
