@@ -5,6 +5,17 @@ local store = require('smartplanner.storage')
 
 local M = { buf = nil, line_index = {} }
 
+-- Build a day header with a consistent total width by padding dashes
+local function header_for_day(day)
+  local target = 80 -- total characters for the header line
+  local prefix = '## ---- '
+  local core = string.format('%s %s', dateu.day_name(day), dateu.ddmmyy(day))
+  local base = prefix .. core .. ' '
+  local pad = target - #base
+  if pad < 1 then pad = 1 end
+  return base .. string.rep('-', pad)
+end
+
 local function ensure_buf(title)
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
     vim.cmd('tabnew')
@@ -42,8 +53,7 @@ local function sort_items(tasks, events, notes)
 end
 
 local function render_day(lines, day, month_tbl, sprints)
-  local header = string.format('## ---- %s %s -------------------------------------', dateu.day_name(day), dateu.ddmmyy(day))
-  lines[#lines + 1] = header
+  lines[#lines + 1] = header_for_day(day)
   -- Split items for this day
   local tasks, events, notes = {}, {}, {}
   for _, t in ipairs(month_tbl.tasks or {}) do if t.date == day then tasks[#tasks + 1] = t end end
@@ -129,8 +139,7 @@ local function render_month(buf, date)
   local lines = { string.format('# Planner — %04d-%02d', y, m), '' }
   -- headings only (collapsed by default)
   for _, d in ipairs(days) do
-    local header = string.format('## ---- %s %s -------------------------------------', dateu.day_name(d), dateu.ddmmyy(d))
-    lines[#lines + 1] = header
+    lines[#lines + 1] = header_for_day(d)
     -- leave collapsed; expand on demand
   end
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
