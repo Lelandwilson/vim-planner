@@ -187,7 +187,11 @@ local function render_month(buf, date)
         i = i + 1
       end
       if end_ln > lnum then
-        vim.api.nvim_buf_set_lines(buf, lnum, end_ln, false, {})
+        vim.schedule(function()
+          if vim.api.nvim_buf_is_valid(buf) then
+            vim.api.nvim_buf_set_lines(buf, lnum, end_ln, false, {})
+          end
+        end)
       end
       return
     end
@@ -255,7 +259,11 @@ local function render_month(buf, date)
     table.insert(lines_ins, '')
   end
     if #lines_ins > 0 then
-      vim.api.nvim_buf_set_lines(buf, lnum, lnum, false, lines_ins)
+      vim.schedule(function()
+        if vim.api.nvim_buf_is_valid(buf) then
+          vim.api.nvim_buf_set_lines(buf, lnum, lnum, false, lines_ins)
+        end
+      end)
     end
   end
   vim.keymap.set('n', '<CR>', toggle_current_day, { buffer = buf, desc = 'SmartPlanner: toggle day' })
