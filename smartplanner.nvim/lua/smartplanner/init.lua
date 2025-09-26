@@ -9,6 +9,7 @@ local planner_float = require('smartplanner.views.planner_float')
 local quicklist = require('smartplanner.views.quicklist')
 local export_md = require('smartplanner.export.md')
 local export_csv = require('smartplanner.export.csv')
+local storage = require('smartplanner.storage')
 
 local M = {}
 
@@ -27,6 +28,7 @@ function M.setup(opts)
   elseif type(cfg.keymaps) == 'table' then
     keymaps.apply_custom(cfg.keymaps)
   end
+  if type(storage.init) == 'function' then pcall(storage.init) end
   M._register_commands()
 end
 
@@ -52,25 +54,25 @@ function M.capture(payload)
 end
 
 function M.update(id, fields)
-  return require('smartplanner.storage.fs').update(id, fields)
+  return require('smartplanner.storage').update(id, fields)
 end
 
 function M.delete(id)
-  return require('smartplanner.storage.fs').delete(id)
+  return require('smartplanner.storage').delete(id)
 end
 
 function M.move(id, fields)
-  return require('smartplanner.storage.fs').move(id, fields)
+  return require('smartplanner.storage').move(id, fields)
 end
 
 function M.span(id, range)
-  return require('smartplanner.storage.fs').span(id, range)
+  return require('smartplanner.storage').span(id, range)
 end
 
 M.query = {
-  tasks = function(q) return require('smartplanner.storage.fs').query_tasks(q or {}) end,
-  events = function(q) return require('smartplanner.storage.fs').query_events(q or {}) end,
-  sprints = function(q) return require('smartplanner.storage.fs').query_sprints(q or {}) end,
+  tasks = function(q) return require('smartplanner.storage').query_tasks(q or {}) end,
+  events = function(q) return require('smartplanner.storage').query_events(q or {}) end,
+  sprints = function(q) return require('smartplanner.storage').query_sprints(q or {}) end,
 }
 
 function M.export(opts)

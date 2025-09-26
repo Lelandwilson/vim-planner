@@ -139,19 +139,193 @@ function M.query_deltas_for_day(day)
 end
 
 -- Stubs for existing API to enable gradual migration; these can be filled next
-function M.read_month() return { tasks = {}, events = {}, notes_index = {} } end
+local function ymd(ts)
+  local t = os.date('*t', ts)
+  return string.format('%04d-%02d-%02d', t.year, t.month, t.day)
+end
+
+local function ymonth(ts)
+  local t = os.date('*t', ts)
+  return string.format('%04d-%02d', t.year, t.month)
+end
+
+local function compute_periods(day)
+  local y, m, d = tonumber(day:sub(1,4)), tonumber(day:sub(6,7)), tonumber(day:sub(9,10))
+  local ts = os.time({ year = y, month = m, day = d, hour = 12 })
+  local week = os.date('%Y-W%V', ts)
+  return week, string.format('%04d-%02d', y, m)
+end
+
+function M.read_month(year, month)
+  local month_str = string.format('%04d-%02d', year, month)
+  local rows = exec([[SELECT * FROM items WHERE month = :m]], { m = month_str }) or {}
+  local tasks, events, notes_index = {}, {}, {}
+  for _, r in ipairs(rows) do
+    if r.type == 'task' then
+      table.insert(tasks, { id = r.id, title = r.label, calendar = r.calendar, priority = r.priority, status = r.status, date = r.day, order_index = r.order_index, tags = {}, created_at = r.created_at, updated_at = r.updated_at })
+    elseif r.type == 'event' then
+      table.insert(events, { id = r.id, title = r.label, calendar = r.calendar, span = r.span == 1, start_date = r.start_ts and ymd(r.start_ts) or nil, end_date = r.end_ts and ymd(r.end_ts) or nil, date = r.day, priority = r.priority, order_index = r.order_index })
+    elseif r.type == 'note' then
+      table.insert(notes_index, { id = r.id, date = r.day, path = r.label or ('note:' .. r.id), tags = {} })
+    end
+  end
+  return { month = month_str, tasks = tasks, events = events, notes_index = notes_index }
+end
+
 function M.write_month() return true end
-function M.add_task() vim.notify('sqlite.add_task not yet implemented', vim.log.levels.WARN) end
-function M.add_event() vim.notify('sqlite.add_event not yet implemented', vim.log.levels.WARN) end
-function M.add_note() vim.notify('sqlite.add_note not yet implemented', vim.log.levels.WARN) end
-function M.add_sprint() vim.notify('sqlite.add_sprint not yet implemented', vim.log.levels.WARN) end
-function M.update() return false end
-function M.delete() return false end
-function M.move() return false end
-function M.span() return false end
-function M.query_tasks() return {} end
-function M.query_events() return {} end
-function M.query_sprints() return {} end
+
+local function upsert_item(r)
+  exec([[INSERT INTO items(id,type,label,status,start_ts,end_ts,allday,span,duration_sec,delta_sec,estimate_sec,actual_sec,added_ts,closed_ts,day,week,month,calendar,priority,order_index,parent_id,sprint_id,body,tags,created_at,updated_at)
+         VALUES(:id,:type,:label,:status,:start_ts,:end_ts,:allday,:span,:duration_sec,:delta_sec,:estimate_sec,:actual_sec,:added_ts,:closed_ts,:day,:week,:month,:calendar,:priority,:order_index,:parent_id,:sprint_id,:body,:tags,datetime('now'),datetime('now'))
+         ON CONFLICT(id) DO UPDATE SET
+           label=excluded.label,status=excluded.status,start_ts=excluded.start_ts,end_ts=excluded.end_ts,allday=excluded.allday,span=excluded.span,duration_sec=excluded.duration_sec,delta_sec=excluded.delta_sec,estimate_sec=excluded.estimate_sec,actual_sec=excluded.actual_sec,day=excluded.day,week=excluded.week,month=excluded.month,calendar=excluded.calendar,priority=excluded.priority,order_index=excluded.order_index,parent_id=excluded.parent_id,sprint_id=excluded.sprint_id,body=excluded.body,tags=excluded.tags,updated_at=datetime('now')
+  ]], r)
+end
+
+local function ensure_periods(rec)
+  if rec.day and (not rec.month or not rec.week) then
+    rec.week, rec.month = compute_periods(rec.day)
+  elseif rec.start_ts and (not rec.day) then
+    rec.day = ymd(rec.start_ts)
+    rec.week, rec.month = compute_periods(rec.day)
+  end
+end
+
+function M.add_task(t)
+  local rec = {
+    id = t.id or require('smartplanner.util.id').uuid(),
+    type = 'task',
+    label = t.title or t.label or '',
+    status = t.status or 'todo',
+    start_ts = nil,
+    end_ts = nil,
+    allday = 0,
+    span = 0,
+    duration_sec = nil,
+    delta_sec = nil,
+    estimate_sec = t.estimate and (t.estimate * 60) or nil,
+    actual_sec = t.actual and (t.actual * 60) or nil,
+    added_ts = os.time(),
+    closed_ts = nil,
+    day = t.date,
+    calendar = t.calendar,
+    priority = t.priority,
+    order_index = t.order_index or 0,
+    parent_id = t.parent_id,
+    sprint_id = t.sprint_id,
+    body = t.notes,
+    tags = t.tags and table.concat(t.tags, ',') or nil,
+  }
+  ensure_periods(rec)
+  upsert_item(rec)
+  return rec
+end
+
+function M.add_event(e)
+  local rec = {
+    id = e.id or require('smartplanner.util.id').uuid(),
+    type = 'event',
+    label = e.title or e.label or '',
+    status = e.status or 'none',
+    start_ts = nil,
+    end_ts = nil,
+    allday = (e.allday and 1 or 0),
+    span = (e.span and 1 or 0),
+    priority = e.priority,
+    order_index = e.order_index or 0,
+    calendar = e.calendar,
+  }
+  if e.date then
+    rec.day = e.date
+  else
+    if e.start_date then rec.start_ts = os.time({ year = tonumber(e.start_date:sub(1,4)), month = tonumber(e.start_date:sub(6,7)), day = tonumber(e.start_date:sub(9,10)), hour = 12 }) end
+    if e.end_date then rec.end_ts = os.time({ year = tonumber(e.end_date:sub(1,4)), month = tonumber(e.end_date:sub(6,7)), day = tonumber(e.end_date:sub(9,10)), hour = 12 }) end
+  end
+  ensure_periods(rec)
+  upsert_item(rec)
+  return rec
+end
+
+function M.add_note(n)
+  local rec = {
+    id = n.id or require('smartplanner.util.id').uuid(),
+    type = 'note',
+    label = n.title or n.label or '',
+    status = 'none',
+    day = n.date,
+    body = n.body or '',
+    calendar = n.calendar,
+  }
+  ensure_periods(rec)
+  upsert_item(rec)
+  return rec
+end
+
+function M.add_sprint(sp)
+  sp.id = sp.id or require('smartplanner.util.id').uuid()
+  local st = os.time({ year = tonumber(sp.start_date:sub(1,4)), month = tonumber(sp.start_date:sub(6,7)), day = tonumber(sp.start_date:sub(9,10)), hour = 12 })
+  local en = os.time({ year = tonumber(sp.end_date:sub(1,4)), month = tonumber(sp.end_date:sub(6,7)), day = tonumber(sp.end_date:sub(9,10)), hour = 12 })
+  exec([[INSERT INTO sprints(id,name,start_ts,end_ts,priority,objective,color,created_at,updated_at)
+         VALUES(:id,:name,:st,:en,:priority,:objective,:color,datetime('now'),datetime('now'))
+         ON CONFLICT(id) DO UPDATE SET name=excluded.name,start_ts=excluded.start_ts,end_ts=excluded.end_ts,priority=excluded.priority,objective=excluded.objective,color=excluded.color,updated_at=datetime('now')
+  ]], { id = sp.id, name = sp.name, st = st, en = en, priority = sp.priority or 0, objective = sp.objective, color = sp.color })
+  return sp
+end
+
+function M.update(id, fields)
+  -- naive: fetch then upsert
+  local row = (exec([[SELECT * FROM items WHERE id=:id]], { id = id }) or {})[1]
+  if not row then return false end
+  for k, v in pairs(fields) do
+    if k == 'title' then row.label = v
+    elseif k == 'date' then row.day = v
+    elseif k == 'status' then row.status = v
+    elseif k == 'priority' then row.priority = v
+    elseif k == 'order_index' then row.order_index = v
+    elseif k == 'start_date' then row.start_ts = os.time({ year = tonumber(v:sub(1,4)), month = tonumber(v:sub(6,7)), day = tonumber(v:sub(9,10)), hour = 12 })
+    elseif k == 'end_date' then row.end_ts = os.time({ year = tonumber(v:sub(1,4)), month = tonumber(v:sub(6,7)), day = tonumber(v:sub(9,10)), hour = 12 })
+    else row[k] = v end
+  end
+  ensure_periods(row)
+  upsert_item(row)
+  return true
+end
+
+function M.delete(id)
+  exec([[DELETE FROM items WHERE id=:id]], { id = id })
+  return true
+end
+
+function M.move(id, fields)
+  return M.update(id, fields)
+end
+
+function M.span(id, range)
+  return M.update(id, { span = 1, start_date = range.start_date, end_date = range.end_date })
+end
+
+function M.query_tasks(q)
+  local start = q.range and q.range.start or ymd(os.time())
+  local finish = q.range and q.range['end'] or start
+  return exec([[SELECT * FROM items WHERE type='task' AND day BETWEEN :s AND :e]], { s = start, e = finish }) or {}
+end
+
+function M.query_events(q)
+  local start = q.range and q.range.start or ymd(os.time())
+  local finish = q.range and q.range['end'] or start
+  return exec([[SELECT * FROM items WHERE type='event' AND (
+                 (day BETWEEN :s AND :e) OR
+                 (span = 1 AND NOT (end_ts < strftime('%s', :s) OR start_ts > strftime('%s', :e)))
+               )]], { s = start, e = finish }) or {}
+end
+
+function M.query_sprints(q)
+  local start = q.range and q.range.start or ymd(os.time())
+  local finish = q.range and q.range['end'] or start
+  local st = os.time({ year = tonumber(start:sub(1,4)), month = tonumber(start:sub(6,7)), day = tonumber(start:sub(9,10)), hour = 12 })
+  local en = os.time({ year = tonumber(finish:sub(1,4)), month = tonumber(finish:sub(6,7)), day = tonumber(finish:sub(9,10)), hour = 12 })
+  return exec([[SELECT * FROM sprints WHERE NOT (end_ts < :st OR start_ts > :en)]], { st = st, en = en }) or {}
+end
 
 -- Quick inbox compatible helpers
 function M.query_quick() return { quick_tasks = {}, quick_notes = {} } end
