@@ -1,120 +1,106 @@
-# SmartPlanner.nvim — User Guide
+# SmartPlanner.nvim — Comprehensive Walkthrough (SQLite-ready)
 
-## Install (Lazy.nvim, local path)
-- Add to `~/.config/nvim/lua/plugins/smartplanner.lua`:
+This guide walks a first-time user through installation, core views, creating and managing data (Tasks, Events, Notes, Sprints), tracking daily deltas (e.g., time in meetings), and verifying persistence. Follow the steps in order on first use.
+
+## Install (Lazy.nvim)
+- Create `~/.config/nvim/lua/plugins/smartplanner.lua` with:
 ```lua
 return {
   {
-    dir = vim.fn.expand("~/Documents/projects/vim-planner/smartplanner.nvim"),
-    name = "smartplanner.nvim",
+    dir = vim.fn.expand('~/Documents/projects/vim-planner/smartplanner.nvim'),
+    name = 'smartplanner.nvim',
     config = function()
-      require("smartplanner").setup({ keymaps = "default", markdown = { render = true }, telescope = { enable = true } })
+      require('smartplanner').setup({
+        storage = { backend = 'sqlite' },
+        keymaps_prefix = 's',
+        markdown = { render = true },
+        telescope = { enable = true },
+      })
     end,
   },
 }
 ```
-- Restart or `:Lazy sync`.
+- Restart Neovim or `:Lazy sync`.
 
-- ## Key Commands (leader-based)
-- Planner: `<leader>sp` (floating: `<leader>sf`)
-- Calendar: `<leader>sc` Month (cycles when focused), `<leader>sw` Week, `<leader>sd` Day
-- Mini Calendar: `<leader>sm`
-- Quick Notes/Todos: `<leader>sq` (panel keys: a add todo, n note, x toggle done, p promote to dated task, D delete, ]d/[d next/prev day, g goto date, c clear date, q/Ctrl-C close)
-- Capture: `:SmartPlannerCapture task|event|note|sprint`
-- Search: `:SmartPlannerSearch tasks|events|sprints`
-- Export: `:SmartPlannerExport md|csv`
-  - Supports scope and date: `:SmartPlannerExport md day 2025-09-15`, `:SmartPlannerExport csv month`
+## Keymaps (prefix-aware)
+With the default prefix `<leader>s`:
+- Planner: `<leader>sp` open, `<leader>sf` floating (Ctrl-C/q to close)
+- Calendar: `<leader>sc` Month (cycles while focused), `<leader>sw` Week, `<leader>sd` Day
+- Mini calendar: `<leader>sm` toggle
+- Quick inbox: `<leader>sq` (a add todo, n note, x toggle, p promote, D delete, ]d/[d next/prev day, g goto date, c clear date)
+- Capture: `<leader>st` task, `<leader>se` event, `<leader>sn` note, `<leader>ss` sprint
+- Planner actions: `]d`/`[d`, `<leader>sx` toggle, `<leader>sr` reschedule, `<leader>sk`/`<leader>sj` reorder, `<leader>sD` delete
+- Folding: `<leader>zA` collapse all, `<leader>zW` expand current week, `<leader>zR` expand date range
+- Deltas: `<leader>zd` Delta Manager, `<leader>zi` add instance for focused day
 
-## Planner Actions
-- Toggle status: `\sx` on a task line (todo → doing → done)
-- Reschedule: `\sr` on a task/event line
-- Reorder: `\su` / `\sd` within a day’s Tasks
-- Navigate days: `]d` / `[d`
-- Floating Planner: `<leader>sP` (Ctrl-C or `q` to close)
+Tip: if a mapping conflicts, it’s skipped with a warning. Change `keymaps_prefix` to move the whole family (e.g., 'p').
 
-## First-time Walkthrough (comprehensive)
-This guide explains each feature, where data lives on disk, and how to view → create → edit → delete. Follow in order on first use.
+## First-time Walkthrough (start to finish)
+1) Planner (view-only pass)
+   - `<leader>sp` opens “Planner — YYYY-MM” with collapsed day headings:
+     `## ---- MONDAY 10/11/25 -------------------------------------`
+   - Press Enter on any heading to expand/collapse. Expanding loads Tasks, Events, Notes, and Deltas for that day.
 
-1) Open the Planner (View-only first)
-   - Press `<leader>sp`.
-   - You’ll see “Planner — YYYY-MM” with day sections like `## 2025-09-07`.
-   - Where data lives: Month shard JSON at `~/.local/share/smartplanner/%Y/months/YYYY-MM.json`.
-   - What it shows: Tasks, Events, Notes for each day, plus Sprint bands.
+2) Calendar & Mini
+   - `<leader>sc` Month; press `<leader>sc` again to cycle Month→Week→Day. Direct: `<leader>sw`/`<leader>sd`.
+   - `<leader>sm` toggles a compact month that highlights Planner’s focus day.
 
-2) Calendar (View-only pass)
-   - Open Month view: `<leader>sc`. Cycle to Week/Day with `<leader>sc` again.
-   - Direct open: `<leader>sw` Week, `<leader>sd` Day. Mini: `<leader>sm`.
-   - Where data lives: same month shard JSON; sprint list at `~/.local/share/smartplanner/%Y/sprints.json`.
+3) Create core data
+   - Sprint: `:SmartPlannerCapture sprint`
+     - Name: “Sprint 9 — Incident Readiness”, Start: `2025-09-15`, End: `2025-09-26` → renders as a band above daily items.
+   - Tasks: `<leader>st` → “Draft incident response plan” (Date: today); again → “Schedule tabletop exercise with team” (Date: `2025-09-18`).
+   - Note: `<leader>sn` → Title “Stakeholder briefing outline” (Date: `2025-09-16`), Body “Objectives: clarify roles; Risks: auth outage; Decisions: tabletop scope”.
+   - Event: `<leader>se` → “DR Failover Test” (Date: `2025-09-22`), and a span “Release Freeze” (Date: `2025-09-27,2025-09-30`).
+   - Expand relevant days to verify sections; check Calendar for span vs single-day placement.
 
-3) Create a Sprint (top-band across days)
-   - Run `:SmartPlannerCapture sprint`.
-   - Name: type `Sprint 9 — Incident Readiness` and press Enter.
-   - Start date: type today (e.g., `2025-09-15`) and Enter.
-   - End date: type `2025-09-26` and Enter.
-   - Why Sprint vs multi‑day task: Sprints represent a timebox (planning context) and render as a band above daily items. Multi‑day tasks represent a single work item spanning dates; they don’t convey cadence or contain other items.
-   - Result: sprint band across the dates in Planner/Calendar; saved to `sprints.json`.
+   Why use which?
+   - Sprint = timebox for many items (band at the top), not a single deliverable.
+   - Multi-day event = one deliverable/time span; appears in the top band.
+   - Task = actionable unit; shows in daily list and supports status/priority/order.
+   - Note = short day-anchored documentation.
 
-4) Add Two Dated Tasks
-   - Run `:SmartPlannerCapture task`.
-     - Title: `Draft incident response plan`
-     - Date: today (e.g., `2025-09-15`)
-   - Run `:SmartPlannerCapture task` again.
-     - Title: `Schedule tabletop exercise with team`
-     - Date: `2025-09-18`
-   - Why Tasks vs Events: Tasks are actionable and get statuses; Events mark time/all‑day activities. Tasks drive your todo flow; Events block time or signal milestones.
-   - Edit: in Planner, toggle `<leader>sx`, reschedule `<leader>sr`, reorder `<leader>sk`/`<leader>sj`.
-   - Delete: move cursor to the task and press `<leader>sD`.
-   - Stored in `months/YYYY-MM.json` under `tasks`.
+4) Deltas (track daily metrics)
+   - `<leader>zd` (Delta Manager) → `a` add:
+     - Label “Time Spent in meetings”, Unit `hrs`, Per-day `2.0`, Start today, End empty (open‑ended).
+   - Expand any day → see “### Deltas” with +2.00 hrs.
+   - Quick add per-day on focused day: `<leader>zi` → pick entry → amount (e.g., `0.5`) → shows as “(entry)”.
 
-5) Add a Dated Note (Markdown with front‑matter)
-   - Run `:SmartPlannerCapture note`.
-     - Title: `Stakeholder briefing outline`
-     - Date: `2025-09-16`
-     - Body: paste a short outline, e.g.:
-       `Objectives: clarify roles; Risks: auth outage; Decisions: scope tabletop`
-   - Result: Markdown saved under `~/.local/share/smartplanner/%Y/notes/…md`; month shard gains an index entry.
-   - Edit: open the MD file (from list) and edit as normal.
-   - Delete: `<leader>sD` removes the index entry (leave file on disk for safety).
+5) Quick inbox (fast capture)
+   - `<leader>sq` → a add quick todo, n quick note; x toggle; D delete; p promote todo to dated task; ]d/[d day preview; g goto date; c clear.
+   - Use this for rapid capture while coding; promote items when ready to schedule.
 
-6) Use the Quick Notes/Todos Panel (floating)
-   - Toggle `\sq`.
-   - Press `a` and type `Call vendor re. SSL expiry` → Enter (adds a quick todo).
-   - Press `n` and type `Questions for tabletop: comms channel, who signs off?` → Enter (adds a quick note).
-   - Move cursor to the quick todo line, press `p`, enter a date like `2025-09-17` → promotes to a dated task in the month shard.
-   - Where data lives: `~/.local/share/smartplanner/%Y/inbox.json` (quick todos/notes).
-   - Toggle done with `x`, delete with `D`, close with `q` or Ctrl‑C.
+6) Edit & triage in Planner
+   - Toggle task status: `<leader>sx` (todo → doing → done)
+   - Reschedule: `<leader>sr` (enter new date)
+   - Reorder within day: `<leader>sk` (up) / `<leader>sj` (down)
+   - Delete current: `<leader>sD`
+   - Navigate: `]d` / `[d`
+   - Folding controls: `<leader>zA` (collapse all), `<leader>zW` (expand current week), `<leader>zR` (expand range)
 
-7) Navigate and Calendar Views
-   - Next/Prev day in Planner: `]d` / `[d`.
-   - Open Calendar: `<leader>sc` (Month). Inside the calendar, press `<leader>sc` to cycle Month → Week → Day; or use `<leader>sw` / `<leader>sd` directly.
-   - Mini Calendar: `<leader>sm` shows a top‑right month; the current planner focus day is highlighted.
+7) Search & export
+   - Search: `:SmartPlannerSearch tasks|events|sprints`
+   - Export: `:SmartPlannerExport <fmt> <scope> [date]`
+     - `:SmartPlannerExport md month` (Markdown), `:SmartPlannerExport md day 2025-09-15`, `:SmartPlannerExport csv month`
 
-8) Edit and Reorder in Planner
-   - Toggle a task status: move cursor to a task line, press `<leader>sx` (todo → doing → done).
-   - Reschedule: `<leader>sr`, enter a new date (e.g., move tabletop exercise to `2025-09-19`).
-   - Reorder within the day: `<leader>sk` (up) / `<leader>sj` (down).
+8) Persistence & storage
+   - SQLite DB (recommended): `~/.local/share/smartplanner/smartplanner.db` (WAL enabled)
+     - Tables: items (tasks/events/notes), sprints, quick_inbox, delta_entries, delta_instances
+   - Filesystem backend (legacy/fallback): `~/.local/share/smartplanner/%Y/` → months/YYYY-MM.json, sprints.json, notes/*.md, inbox.json
+   - Backend switch in setup: `storage = { backend = 'sqlite' }` or `'fs'`
 
-9) Export a Report
-   - `:SmartPlannerExport md month` opens a Markdown export of the current month.
-   - `:SmartPlannerExport md day 2025-09-15` or `:SmartPlannerExport csv month` for other scopes.
+9) Migrate from FS to SQLite (if upgrading)
+   - Run: `:SmartPlannerMigrate fs->sqlite`
+     - Imports recent years’ months, sprints; notes bodies live in DB by default on this branch.
+   - Verify: reopen Planner `<leader>sp`, expand a few days.
 
-## Where Data Is Saved
-- Year root: `~/.local/share/smartplanner/%Y/`
-  - `months/YYYY-MM.json` — month shard: tasks, events, notes index
-  - `sprints.json` — list of sprints (multi-day bands)
-  - `notes/*.md` — Markdown notes with YAML front-matter
-  - `inbox.json` — Quick Notes/Todos panel data (unscheduled)
+10) Customize & tips
+   - Keymap prefix: set `keymaps_prefix` to move defaults (e.g., 'p' → `<leader>pp`, `<leader>pc`, …).
+   - Conflicts: defaults skip and warn; define your own or set `keymaps = false` in setup to opt-out.
+   - Colors: calendar/mini/headers link to render-markdown/markdown highlights.
+   - Calendar filetype: defaults to `smartplanner-calendar` to avoid Markdown LSP crashes; change via setup if needed.
 
-Calendar buffers use `smartplanner-calendar` filetype by default to avoid Markdown LSP crashes (configurable in setup). Planner/Quicklist use Markdown highlighting.
-
-## Storage Layout
-- Year root: `~/.local/share/smartplanner/%Y/`
-  - `months/YYYY-MM.json` — tasks/events/notes index
-  - `sprints.json` — spanning sprints
-  - `notes/*.md` — Markdown notes with YAML front‑matter
-
-## Tips
-- Works without Telescope/render-markdown; enables extras when present.
-- No hard-coded colors; adapts to your Catppuccin theme.
-- Keep planner fast by limiting visible months; data is sharded per month.
-- Calendar buffers use a custom filetype (`smartplanner-calendar`) to avoid Markdown LSP crashes. If you prefer attaching your Markdown LSP to the calendar, set an autocmd to change filetype, but note some servers (e.g., markdown_oxide) may not handle the grid text.
+11) Troubleshooting
+   - Calendar LSP crash: keep `smartplanner-calendar` filetype.
+   - No DB: ensure `kkharji/sqlite.lua` is installed; check `:messages`.
+   - Keys missing: possible conflict — adjust `keymaps_prefix` or define custom maps.
+   - Day doesn’t load items: verify backend ('sqlite'), run migration if coming from FS.
