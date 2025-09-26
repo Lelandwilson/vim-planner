@@ -173,9 +173,9 @@ local function render_month(buf, date)
     if not dd then return end
     local yyyy = tostring(2000 + tonumber(yy))
     local day = string.format('%s-%s-%s', yyyy, mm, dd)
-    -- check if already expanded (look ahead for a section marker)
+    -- check if already expanded: if the next line is not another header, it's expanded
     local next_line = vim.api.nvim_buf_get_lines(buf, lnum, lnum + 1, false)[1]
-    if next_line and next_line:match('^### ') then
+    if next_line and not next_line:match('^## %-%-') then
       -- collapse: delete until next header or end
       local end_ln = lnum
       local total = vim.api.nvim_buf_line_count(buf)
