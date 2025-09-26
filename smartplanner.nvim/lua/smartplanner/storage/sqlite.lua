@@ -248,8 +248,8 @@ function M.add_event(e)
     type = 'event',
     label = e.title or e.label or '',
     status = e.status or 'none',
-    start_ts = nil,
-    end_ts = nil,
+    start_ts = e.start_ts,
+    end_ts = e.end_ts,
     allday = (e.allday and 1 or 0),
     span = (e.span and 1 or 0),
     priority = e.priority,
@@ -259,8 +259,8 @@ function M.add_event(e)
   if e.date then
     rec.day = e.date
   else
-    if e.start_date then rec.start_ts = os.time({ year = tonumber(e.start_date:sub(1,4)), month = tonumber(e.start_date:sub(6,7)), day = tonumber(e.start_date:sub(9,10)), hour = 12 }) end
-    if e.end_date then rec.end_ts = os.time({ year = tonumber(e.end_date:sub(1,4)), month = tonumber(e.end_date:sub(6,7)), day = tonumber(e.end_date:sub(9,10)), hour = 12 }) end
+    if (not rec.start_ts) and e.start_date then rec.start_ts = os.time({ year = tonumber(e.start_date:sub(1,4)), month = tonumber(e.start_date:sub(6,7)), day = tonumber(e.start_date:sub(9,10)), hour = 12 }) end
+    if (not rec.end_ts) and e.end_date then rec.end_ts = os.time({ year = tonumber(e.end_date:sub(1,4)), month = tonumber(e.end_date:sub(6,7)), day = tonumber(e.end_date:sub(9,10)), hour = 12 }) end
   end
   ensure_periods(rec)
   upsert_item(rec)

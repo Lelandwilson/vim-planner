@@ -49,6 +49,20 @@ function M.ddmmyy(yyyy_mm_dd)
   return string.format('%02d/%02d/%02d', d, m, y % 100)
 end
 
+function M.mk_ts(y, m, d, hh, mm)
+  return os.time({ year = y, month = m, day = d, hour = hh or 0, min = mm or 0, sec = 0 })
+end
+
+-- Parse 'YYYY-MM-DD HH:MM' or 'YYYY-MM-DD'
+function M.parse_datetime(s)
+  if not s then return nil end
+  local y, m, d, hh, mm = s:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)%s+(%d%d):(%d%d)$')
+  if y then return M.mk_ts(tonumber(y), tonumber(m), tonumber(d), tonumber(hh), tonumber(mm)), true end
+  y, m, d = s:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)$')
+  if y then return M.mk_ts(tonumber(y), tonumber(m), tonumber(d), 0, 0), false end
+  return nil
+end
+
 function M.month_days(year, month)
   local days = {}
   local first = to_time(year, month, 1)

@@ -1,7 +1,8 @@
 -- Modal capture/edit UI (§2.6, §6.4)
 local idu = require('smartplanner.util.id')
-local store = require('smartplanner.storage.fs')
+local store = require('smartplanner.storage')
 local dateu = require('smartplanner.util.date')
+local cfg = require('smartplanner.config').get()
 
 local M = {}
 
@@ -25,14 +26,35 @@ local function capture_task()
 end
 
 local function capture_event()
-  local ev = { id = idu.uuid(), span = false, allday = true, priority = 1 }
+  local ev = { id = idu.uuid(), span = false, allday = false, priority = 1 }
   input('Event title:', '', function(title)
     if not title or title == '' then return end
     ev.title = title
-    input('Date (YYYY-MM-DD) or range (start,end):', dateu.today(), function(date)
-      if not date then return end
-      local s, e = date:match('^(%d%d%d%d%-%d%d%-%d%d),(%d%d%d%d%-%d%d%-%d%d)$')
-      if s and e then ev.span = true; ev.start_date = s; ev.end_date = e else ev.date = date end
+    input('When (YYYY-MM-DD [HH:MM] or start,end):', dateu.today() .. ' ' .. (cfg.events.default_start or '09:00'), function(text)
+      if not text or text == '' then return end
+      -- Range with optional times
+      local s, e = text:match('^([^,]+),([^,]+)$')
+      if s and e then
+        local sts, shas_time = dateu.parse_datetime(s)
+        local ets, ehas_time = dateu.parse_datetime(e)
+        if sts and ets then
+          ev.span = true
+          ev.start_ts = sts
+          ev.end_ts = ets
+        end
+      else
+        -- Single date/time; default duration
+        local ts, has_time = dateu.parse_datetime(text)
+        if ts then
+          local dur = (cfg.events.default_duration_min or 60) * 60
+          ev.start_ts = ts
+          ev.end_ts = ts + dur
+        else
+          -- Fallback date only
+          ev.date = text
+          ev.allday = true
+        end
+      end
       store.add_event(ev)
       vim.notify('Event added: ' .. ev.title)
     end)
