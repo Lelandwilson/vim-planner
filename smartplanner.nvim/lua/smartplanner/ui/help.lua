@@ -29,6 +29,14 @@ local function calendar_help(prefix)
     string.format('%sw Week  %sd Day',       prefix, prefix),
     string.format('%sp Open Planner  %sm Mini Toggle', prefix, prefix),
     '',
+    'In Day view:',
+    string.format('  %st Add Task   %se Add Event', prefix, prefix),
+    string.format('  %sn Add Note   %ss Add Sprint', prefix, prefix),
+    string.format('  %si Rename     %sD Delete', prefix, prefix),
+    string.format('  %sx Mark Done  %sr Reschedule', prefix, prefix),
+    string.format('  %sd Delta Mgr  %si Delta Instance', prefix, prefix),
+    string.format('  %sq Quick Inbox', prefix),
+    '',
     'Enter on a cell to jump; q/Ctrl-C to close.',
   }
 end

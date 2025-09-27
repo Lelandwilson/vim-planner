@@ -4,7 +4,7 @@ local dateu = require('smartplanner.util.date')
 local store = require('smartplanner.storage.fs')
 
 local hl = require('smartplanner.ui.highlight')
-local M = { buf = nil }
+local M = { buf = nil, day_index = {} }
 
 local function ensure_buf(title)
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
@@ -137,18 +137,93 @@ local function render_day_view(buf, date)
   local y, m = dateu.year_month(date)
   local month_tbl, sprints = collect_for_month(y, m)
   local lines = { '# Day — ' .. date, '' }
-  local spans, singles = cell_summary(date, month_tbl, sprints)
+  M.day_index = {}
+  -- Spans summary
+  local spans, _ = cell_summary(date, month_tbl, sprints)
   if #spans > 0 then
     lines[#lines + 1] = 'Top band (spans):'
     for _, s in ipairs(spans) do lines[#lines + 1] = '- ' .. s end
     lines[#lines + 1] = ''
   end
-  if #singles > 0 then
-    lines[#lines + 1] = 'Items:'
-    for _, s in ipairs(singles) do lines[#lines + 1] = '- ' .. s end
+  -- Detailed items
+  local tasks, events, notes = {}, {}, {}
+  for _, t in ipairs(month_tbl.tasks or {}) do if t.date == date then table.insert(tasks, t) end end
+  for _, e in ipairs(month_tbl.events or {}) do if (e.date == date) or (e.span and dateu.range_intersect(e.start_date, e.end_date, date, date)) then table.insert(events, e) end end
+  for _, n in ipairs(month_tbl.notes_index or {}) do if n.date == date then table.insert(notes, n) end end
+  if #events > 0 then
+    lines[#lines + 1] = '### Events'
+    for _, e in ipairs(events) do
+      local time = e.start_ts and not e.span and not e.allday and (os.date('%H:%M', e.start_ts) .. ' ') or ''
+      lines[#lines + 1] = string.format('- %s%s', time, e.title or e.id)
+      M.day_index[#lines] = { type = 'event', id = e.id, date = date }
+    end
+    lines[#lines + 1] = ''
+  end
+  if #tasks > 0 then
+    lines[#lines + 1] = '### Tasks'
+    for _, t in ipairs(tasks) do
+      local token = t.status == 'done' and '[✓]' or (t.status == 'doing' and '[~]' or '[ ]')
+      lines[#lines + 1] = string.format('- %s %s', token, t.title)
+      M.day_index[#lines] = { type = 'task', id = t.id, date = date }
+    end
+    lines[#lines + 1] = ''
+  end
+  if #notes > 0 then
+    lines[#lines + 1] = '### Notes'
+    for _, n in ipairs(notes) do
+      lines[#lines + 1] = string.format('- %s', n.path or n.title or n.id)
+      M.day_index[#lines] = { type = 'note', id = n.id, date = date }
+    end
+    lines[#lines + 1] = ''
   end
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   hl.hl_line(buf, 0, 'SmartPlannerHeader')
+  -- Day view keymaps
+  local prefix = '<leader>' .. ((require('smartplanner.config').get().keymaps_prefix) or 's')
+  local function map(lhs, fn, desc) vim.keymap.set('n', lhs, fn, { buffer = buf, desc = desc, silent = true }) end
+  map(prefix..'t', function() require('smartplanner').capture({ type='task', date = date }) end, 'Add Task')
+  map(prefix..'e', function() require('smartplanner').capture({ type='event', date = date }) end, 'Add Event')
+  map(prefix..'n', function() require('smartplanner').capture({ type='note', date = date }) end, 'Add Note')
+  map(prefix..'s', function() require('smartplanner').capture({ type='sprint' }) end, 'Add Sprint')
+  map(prefix..'i', function()
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local meta = M.day_index[lnum]
+    local line = vim.api.nvim_get_current_line()
+    local current = line:gsub('^- %[[^%]]-%]%s*', ''):gsub('^%- %s*', '')
+    vim.ui.input({ prompt = 'Rename label: ', default = current }, function(newlabel)
+      if not meta or not newlabel or newlabel == '' then return end
+      require('smartplanner.storage').update(meta.id, { title = newlabel, label = newlabel })
+      render_day_view(buf, date)
+    end)
+  end, 'Rename label (day)')
+  map(prefix..'x', function()
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local meta = M.day_index[lnum]
+    if not meta or meta.type ~= 'task' then return end
+    require('smartplanner.storage').update(meta.id, { status = 'done' })
+    render_day_view(buf, date)
+  end, 'Mark done (day)')
+  map(prefix..'D', function()
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local meta = M.day_index[lnum]
+    if not meta then return end
+    require('smartplanner.storage').delete(meta.id)
+    render_day_view(buf, date)
+  end, 'Delete item (day)')
+  map(prefix..'r', function()
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local meta = M.day_index[lnum]
+    if not meta then return end
+    vim.ui.input({ prompt = 'New date (YYYY-MM-DD): ', default = date }, function(newd)
+      if not newd or newd == '' then return end
+      require('smartplanner.storage').move(meta.id, { date = newd, start_date = newd })
+      render_day_view(buf, date)
+    end)
+  end, 'Reschedule (day)')
+  map(prefix..'p', function() require('smartplanner').open_planner({ date = date }) end, 'Open Planner (day)')
+  map(prefix..'q', function() require('smartplanner').toggle_quicklist() end, 'Quick Inbox')
+  map(prefix..'d', function() require('smartplanner.ui.delta').open() end, 'Delta Manager')
+  map(prefix..'i', function() require('smartplanner.ui.delta').add_instance_for_day(date) end, 'Delta Instance (day)')
 end
 
 local function render_week_view(buf, date)

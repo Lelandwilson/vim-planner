@@ -12,12 +12,12 @@ local function input(prompt, default, cb)
   end)
 end
 
-local function capture_task()
+local function capture_task(defaults)
   local task = { id = idu.uuid(), status = 'todo', priority = 1, tags = {} }
   input('Task title:', '', function(title)
     if not title or title == '' then return end
     task.title = title
-    input('Date (YYYY-MM-DD):', dateu.today(), function(date)
+    input('Date (YYYY-MM-DD):', (defaults and defaults.date) or dateu.today(), function(date)
       task.date = date or dateu.today()
       store.add_task(task)
       vim.notify('Task added: ' .. task.title)
@@ -25,12 +25,18 @@ local function capture_task()
   end)
 end
 
-local function capture_event()
+local function capture_event(defaults)
   local ev = { id = idu.uuid(), span = false, allday = false, priority = 1 }
   input('Event title:', '', function(title)
     if not title or title == '' then return end
     ev.title = title
-    input('When (YYYY-MM-DD [HH:MM] or start,end):', dateu.today() .. ' ' .. (cfg.events.default_start or '09:00'), function(text)
+    local def_when
+    if defaults and defaults.date then
+      def_when = defaults.date .. ' ' .. (cfg.events.default_start or '09:00')
+    else
+      def_when = dateu.today() .. ' ' .. (cfg.events.default_start or '09:00')
+    end
+    input('When (YYYY-MM-DD [HH:MM] or start,end):', def_when, function(text)
       if not text or text == '' then return end
       -- Range with optional times
       local s, e = text:match('^([^,]+),([^,]+)$')
@@ -61,12 +67,12 @@ local function capture_event()
   end)
 end
 
-local function capture_note()
+local function capture_note(defaults)
   local n = { id = idu.uuid(), tags = {} }
   input('Note title:', '', function(title)
     if not title or title == '' then return end
     n.title = title
-    input('Date (YYYY-MM-DD):', dateu.today(), function(date)
+    input('Date (YYYY-MM-DD):', (defaults and defaults.date) or dateu.today(), function(date)
       n.date = date or dateu.today()
       input('Body (optional):', '', function(body)
         n.body = body or ''
@@ -95,9 +101,9 @@ end
 
 function M.capture(opts)
   local t = (opts and opts.type) or 'task'
-  if t == 'task' then return capture_task()
-  elseif t == 'event' then return capture_event()
-  elseif t == 'note' then return capture_note()
+  if t == 'task' then return capture_task(opts)
+  elseif t == 'event' then return capture_event(opts)
+  elseif t == 'note' then return capture_note(opts)
   elseif t == 'sprint' then return capture_sprint()
   else
     vim.notify('Unknown capture type: ' .. tostring(t), vim.log.levels.ERROR)
