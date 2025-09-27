@@ -435,7 +435,7 @@ end
 
 local function header_is_expanded(lnum)
   local next_line = vim.api.nvim_buf_get_lines(M.buf, lnum, lnum + 1, false)[1]
-  return next_line and next_line:match('^### ') ~= nil
+  return next_line ~= nil and not next_line:match('^## %-%-')
 end
 
 function M.collapse_all()
@@ -443,7 +443,7 @@ function M.collapse_all()
   local total = vim.api.nvim_buf_line_count(M.buf)
   for i = 1, total do
     if line_is_header(i) and header_is_expanded(i) then
-      toggle_at_line(i)
+      collapse_at(M.buf, i)
     end
   end
 end
@@ -462,7 +462,7 @@ function M.expand_week()
         local day = string.format('%s-%s-%s', yyyy, mm, dd)
         local diff = math.abs((to_ts(day) - to_ts(focus)) / (24*3600))
         if diff <= 3 and not header_is_expanded(i) then
-          toggle_at_line(i)
+          expand_at(M.buf, i, day)
         end
       end
     end
@@ -485,7 +485,7 @@ function M.expand_range(start_day, end_day)
         local day = string.format('%s-%s-%s', yyyy, mm, dd)
         local ts = to_ts(day)
         if ts >= st and ts <= en and not header_is_expanded(i) then
-          toggle_at_line(i)
+          expand_at(M.buf, i, day)
         end
       end
     end
