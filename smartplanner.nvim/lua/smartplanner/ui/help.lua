@@ -4,18 +4,18 @@ local function planner_help(prefix)
   return {
     'SmartPlanner — Planner Keys',
     '',
-    string.format('%s p  Open Planner    %s f  Floating Planner', prefix, prefix),
-    string.format('%s l  Next Day        %s h  Prev Day', prefix, prefix),
-    string.format('%s x  Toggle Status   %s r  Reschedule', prefix, prefix),
-    string.format('%s k  Move Up         %s j  Move Down', prefix, prefix),
-    string.format('%s D  Delete Item     %s i  Rename Label', prefix, prefix),
-    string.format('%s t  Capture Task    %s e  Capture Event', prefix, prefix),
-    string.format('%s n  Capture Note    %s s  Capture Sprint', prefix, prefix),
-    string.format('%s d  Calendar Day    %s w  Calendar Week', prefix, prefix),
-    string.format('%s c  Calendar Month  %s m  Mini Toggle', prefix, prefix),
-    string.format('%s q  Quick Inbox     zA Collapse All', prefix),
+    string.format('%sp  Open Planner    %sf  Floating Planner', prefix, prefix),
+    string.format('%sl  Next Day        %sh  Prev Day',       prefix, prefix),
+    string.format('%sx  Toggle Status   %sr  Reschedule',     prefix, prefix),
+    string.format('%sk  Move Up         %sj  Move Down',      prefix, prefix),
+    string.format('%sD  Delete Item     %si  Rename Label',   prefix, prefix),
+    string.format('%st  Capture Task    %se  Capture Event',  prefix, prefix),
+    string.format('%sn  Capture Note    %ss  Capture Sprint', prefix, prefix),
+    string.format('%sd  Calendar Day    %sw  Calendar Week',  prefix, prefix),
+    string.format('%sc  Calendar Month  %sm  Mini Toggle',    prefix, prefix),
+    string.format('%sq  Quick Inbox     zA Collapse All',     prefix),
     'zW Expand Week      zR Expand Range',
-    string.format('%s d  Delta Manager   %s i  Delta Instance (per-day)', prefix, prefix),
+    string.format('%sd  Delta Manager   %si  Delta Instance (per-day)', prefix, prefix),
     '',
     'Enter on a day heading to expand/collapse. q/Ctrl-C to close.',
   }
@@ -25,9 +25,9 @@ local function calendar_help(prefix)
   return {
     'SmartPlanner — Calendar Keys',
     '',
-    string.format('%s c Month (cycle views)', prefix),
-    string.format('%s w Week  %s d Day', prefix, prefix),
-    string.format('%s p Open Planner  %s m Mini Toggle', prefix, prefix),
+    string.format('%sc Month (cycle views)', prefix),
+    string.format('%sw Week  %sd Day',       prefix, prefix),
+    string.format('%sp Open Planner  %sm Mini Toggle', prefix, prefix),
     '',
     'Enter on a cell to jump; q/Ctrl-C to close.',
   }
@@ -50,7 +50,8 @@ end
 
 function M.toggle()
   if M.win and vim.api.nvim_win_is_valid(M.win) then return M.close() end
-  local prefix = '<leader>' .. ((require('smartplanner.config').get().keymaps_prefix) or 's')
+  -- Display <l> as shorthand for <leader> in the help overlay
+  local prefix = '<l>' .. ((require('smartplanner.config').get().keymaps_prefix) or 's')
   local name = vim.api.nvim_buf_get_name(0)
   if name:match('SmartPlanner: Planner') then
     open(planner_help(prefix))
