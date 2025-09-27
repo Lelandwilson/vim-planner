@@ -54,6 +54,21 @@ local function ensure_buf(title)
   return M.buf
 end
 
+-- Safely mutate buffer lines by pausing Treesitter highlighter to avoid extmark errors
+local function with_ts_pause(buf, fn)
+  local ok_ts, _ = pcall(require, 'vim.treesitter')
+  if ok_ts then
+    pcall(vim.treesitter.stop, buf)
+  end
+  pcall(fn)
+  if ok_ts then
+    -- restart slightly later so the redraw happens cleanly
+    vim.defer_fn(function()
+      pcall(vim.treesitter.start, buf)
+    end, 5)
+  end
+end
+
 local function sort_items(tasks, events, notes)
   table.sort(events, function(a, b)
     if (a.span or a.allday) ~= (b.span or b.allday) then return (a.span or a.allday) end
@@ -189,7 +204,9 @@ local function render_month(buf, date)
       if end_ln > lnum then
         vim.schedule(function()
           if vim.api.nvim_buf_is_valid(buf) then
-            vim.api.nvim_buf_set_lines(buf, lnum, end_ln, false, {})
+            with_ts_pause(buf, function()
+              vim.api.nvim_buf_set_lines(buf, lnum, end_ln, false, {})
+            end)
           end
         end)
       end
@@ -268,11 +285,13 @@ local function render_month(buf, date)
     if #lines_ins > 0 then
       vim.schedule(function()
         if vim.api.nvim_buf_is_valid(buf) then
-          vim.api.nvim_buf_set_lines(buf, lnum, lnum, false, lines_ins)
-          local base = lnum + 1
-          for off, meta in pairs(idx_map) do
-            M.line_index[base + off - 1] = meta
-          end
+          with_ts_pause(buf, function()
+            vim.api.nvim_buf_set_lines(buf, lnum, lnum, false, lines_ins)
+            local base = lnum + 1
+            for off, meta in pairs(idx_map) do
+              M.line_index[base + off - 1] = meta
+            end
+          end)
         end
       end)
     end
