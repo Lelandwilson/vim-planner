@@ -275,6 +275,7 @@ local function render_month(buf, date)
     for _, di in ipairs(inst) do
       local value = (di.delta_sec or 0) / 3600.0
       table.insert(lines_ins, string.format('- %s (entry): +%.2f %s', di.label or 'Delta', value, di.time_unit or 'hrs'))
+      idx_map[#lines_ins] = { type = 'delta_instance', id = di.id, date = day }
     end
     table.insert(lines_ins, '')
   end
@@ -500,6 +501,38 @@ function M.rename_current()
   vim.ui.input({ prompt = 'Rename label: ', default = current }, function(newlabel)
     if not newlabel or newlabel == '' then return end
     require('smartplanner.storage').update(item.id, { title = newlabel, label = newlabel })
+    M.goto_date(item.date or (state.get_focus_day() or dateu.today()))
+  end)
+end
+
+local function delta_step_sec()
+  local cfg = require('smartplanner.config').get()
+  return ((cfg.deltas and cfg.deltas.step_min) or 30) * 60
+end
+
+function M.delta_increment(sign)
+  local item = current_item()
+  if not item or item.type ~= 'delta_instance' then return end
+  local step = delta_step_sec() * (sign or 1)
+  -- fetch current line value
+  local line = vim.api.nvim_get_current_line()
+  local cur = tonumber(line:match('%+([%d%.]+)')) or 0
+  local current_sec = math.floor(cur * 3600)
+  local new_sec = math.max(0, current_sec + step)
+  require('smartplanner.storage').update_delta_instance(item.id, { delta_sec = new_sec })
+  M.goto_date(item.date or (state.get_focus_day() or dateu.today()))
+end
+
+function M.delta_set()
+  local item = current_item()
+  if not item or item.type ~= 'delta_instance' then return end
+  local line = vim.api.nvim_get_current_line()
+  local cur = tonumber(line:match('%+([%d%.]+)')) or 0
+  vim.ui.input({ prompt = 'Set delta (hours): ', default = tostring(cur) }, function(val)
+    if not val or val == '' then return end
+    local hrs = tonumber(val)
+    if not hrs then return end
+    require('smartplanner.storage').update_delta_instance(item.id, { delta_sec = math.floor(hrs * 3600) })
     M.goto_date(item.date or (state.get_focus_day() or dateu.today()))
   end)
 end

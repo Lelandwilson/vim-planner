@@ -16,6 +16,8 @@ local function planner_help(prefix)
     string.format('%sq  Quick Inbox     zA Collapse All',     prefix),
     'zW Expand Week      zR Expand Range',
     string.format('%sd  Delta Manager   %si  Delta Instance (per-day)', prefix, prefix),
+    string.format('%s+  Delta +step     %s-  Delta -step', prefix, prefix),
+    string.format('%s=  Delta set hrs', prefix),
     '',
     'Enter on a day heading to expand/collapse. q/Ctrl-C to close.',
   }

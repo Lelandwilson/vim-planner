@@ -17,6 +17,7 @@ local defaults = {
   keymaps_prefix = 's',
   calendar = { filetype = 'smartplanner-calendar', buftype = 'nofile' },
   events = { default_start = '09:00', default_duration_min = 60 },
+  deltas = { step_min = 30 },
 }
 
 function M.get()

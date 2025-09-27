@@ -141,6 +141,16 @@ function M.query_deltas_for_day(day)
   return {}, inst
 end
 
+function M.update_delta_instance(id, fields)
+  local sets = {}
+  local params = { id = id }
+  if fields.delta_sec ~= nil then table.insert(sets, 'delta_sec=:delta_sec'); params.delta_sec = fields.delta_sec end
+  if fields.note ~= nil then table.insert(sets, 'note=:note'); params.note = fields.note end
+  if #sets == 0 then return false end
+  exec('UPDATE delta_instances SET ' .. table.concat(sets, ',') .. ", updated_at=datetime('now') WHERE id=:id", params)
+  return true
+end
+
 function M.query_day(day)
   local t = exec([[SELECT * FROM items WHERE day = :d]], { d = day }) or {}
   local tasks, events, notes = {}, {}, {}

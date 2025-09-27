@@ -372,4 +372,8 @@ function M.query_deltas_for_day(day)
   return {}, {}
 end
 
+function M.update_delta_instance(id, fields)
+  return false
+end
+
 return M

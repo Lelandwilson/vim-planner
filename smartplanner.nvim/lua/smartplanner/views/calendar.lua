@@ -159,6 +159,47 @@ local function render_day_view(buf, date)
     end
     lines[#lines + 1] = ''
   end
+  -- Bind delta quick edit keys (day view)
+  local function delta_line_meta()
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    return M.day_index[lnum]
+  end
+  local function d_step(sign)
+    local meta = delta_line_meta()
+    if not meta then return end
+    if meta.type == 'task' and sign == 0 then
+      -- reuse rename for items
+      local line = vim.api.nvim_get_current_line()
+      local current = line:gsub('^- %[[^%]]-%]%s*', ''):gsub('^%- %s*', '')
+      vim.ui.input({ prompt = 'Rename label: ', default = current }, function(newlabel)
+        if not newlabel or newlabel == '' then return end
+        require('smartplanner.storage').update(meta.id, { title = newlabel, label = newlabel })
+        render_day_view(buf, date)
+      end)
+      return
+    end
+    if meta.type ~= 'delta_instance' then return end
+    local cfg = require('smartplanner.config').get()
+    local step = ((cfg.deltas and cfg.deltas.step_min) or 30) * 60
+    if sign == 0 then
+      vim.ui.input({ prompt = 'Set delta (hours): ', default = '0.5' }, function(val)
+        local hrs = tonumber(val)
+        if not hrs then return end
+        require('smartplanner.storage').update_delta_instance(meta.id, { delta_sec = math.floor(hrs*3600) })
+        render_day_view(buf, date)
+      end)
+    else
+      local line = vim.api.nvim_get_current_line()
+      local cur = tonumber(line:match('%+([%d%.]+)')) or 0
+      local cur_sec = math.floor(cur*3600)
+      local new_sec = math.max(0, cur_sec + (sign*step))
+      require('smartplanner.storage').update_delta_instance(meta.id, { delta_sec = new_sec })
+      render_day_view(buf, date)
+    end
+  end
+  map(prefix..'+', function() d_step(1) end, 'Delta +step (day)')
+  map(prefix..'-', function() d_step(-1) end, 'Delta -step (day)')
+  map(prefix..'=', function() d_step(0) end, 'Delta set (day)')
   if #tasks > 0 then
     lines[#lines + 1] = '### Tasks'
     for _, t in ipairs(tasks) do
