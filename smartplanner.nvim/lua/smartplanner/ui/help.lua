@@ -40,8 +40,9 @@ local function open(lines)
   local ui = vim.api.nvim_list_uis()[1]
   local width = 54
   local height = #lines + 2
-  local row = 2
-  local col = ui.width - width - 2
+  -- Bottom-right: 2 lines padding from bottom/right, clamp to keep on screen
+  local row = math.max(1, ui.height - height - 2)
+  local col = math.max(1, ui.width - width - 2)
   M.win = vim.api.nvim_open_win(M.buf, false, { relative = 'editor', width = width, height = height, row = row, col = col, border = 'rounded', style = 'minimal', zindex = 70 })
   vim.keymap.set('n', 'q', function() M.close() end, { buffer = M.buf, nowait = true })
   vim.keymap.set('n', '<C-c>', function() M.close() end, { buffer = M.buf, nowait = true })
