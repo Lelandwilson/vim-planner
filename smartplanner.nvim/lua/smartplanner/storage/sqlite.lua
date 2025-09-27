@@ -12,7 +12,13 @@ if not ok then
 end
 
 local db_path = vim.fn.stdpath('data') .. '/smartplanner/smartplanner.db'
-local db = sqlite({ uri = db_path })
+-- Ensure parent directory exists before opening
+local db_dir = vim.fn.fnamemodify(db_path, ':h')
+if vim.fn.isdirectory(db_dir) == 0 then
+  vim.fn.mkdir(db_dir, 'p')
+end
+-- Open connection using sqlite.lua API
+local db = (sqlite.open and sqlite.open(db_path)) or (sqlite.new and sqlite.new(db_path))
 
 local M = {}
 
