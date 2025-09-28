@@ -264,7 +264,7 @@ local function render_day_view(buf, date)
   map(prefix..'p', function() require('smartplanner').open_planner({ date = date }) end, 'Open Planner (day)')
   map(prefix..'q', function() require('smartplanner').toggle_quicklist() end, 'Quick Inbox')
   map(prefix..'d', function() require('smartplanner.ui.delta').open() end, 'Delta Manager')
-  map(prefix..'i', function() require('smartplanner.ui.delta').add_instance_for_day(date) end, 'Delta Instance (day)')
+  map(prefix..'g', function() require('smartplanner.ui.delta').add_instance_for_day(date) end, 'Delta Instance (day)')
 end
 
 local function render_week_view(buf, date)
